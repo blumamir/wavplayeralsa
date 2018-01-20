@@ -38,7 +38,13 @@ int playback_callback(snd_pcm_sframes_t nframes) {
 
 int main(int argc, char *argv[]) {
 
-	const char *filename = "/home/amir/Repos/wavplayer/sample_7sec.wav";
+	if (argc <= 1) {
+		std::cout << "Usage: " << argv[0] << " file.wav" << std::endl;
+		return -1;
+	}
+
+
+	const char *filename = argv[1];
 
 	// sndfile stuff
 	SF_INFO sfinfo;
