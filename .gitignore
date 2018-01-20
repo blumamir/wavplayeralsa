@@ -1,3 +1,8 @@
+# ignore object and binary dirs
+bin/*
+obj/*
+Debug/*
+
 # Prerequisites
 *.d
 

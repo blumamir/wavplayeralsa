@@ -60,10 +60,7 @@ int main(int argc, char *argv[]) {
     sf_read_raw(infile, buffer, buf_size);
 
 	// alsa stuff
-	snd_pcm_t *pcm_handle;
-	snd_pcm_uframes_t frames;
 	int err;
-	int dir, pcmrc;
 
 	const char *audioDevice = "plughw:0,0";
 	if( (err = snd_pcm_open(&playback_handle, audioDevice, SND_PCM_STREAM_PLAYBACK, 0)) < 0) {
