@@ -6,6 +6,7 @@
 snd_pcm_t *playback_handle;
 short buf [4096 * 16];
 int channels = 1;
+unsigned int framerate = 44100;
 char *buffer = NULL;
 size_t buf_size = 0;
 snd_pcm_sframes_t total_frames = 0;
@@ -61,6 +62,7 @@ int main(int argc, char *argv[]) {
 	std::cout << "Format: " << sfinfo.format << std::endl;
 
 	channels = sfinfo.channels;
+	framerate = sfinfo.samplerate;
 	buf_size = sfinfo.frames * channels * 2;
 	total_frames = sfinfo.frames;
     std::cout << "buffer size: " << buf_size << std::endl;
@@ -101,8 +103,7 @@ int main(int argc, char *argv[]) {
 		return -1;				
 	}
 
-	unsigned int sample_rate = 44100;
-	if( (err = snd_pcm_hw_params_set_rate_near(playback_handle, hw_params, &sample_rate, 0)) < 0) {
+	if( (err = snd_pcm_hw_params_set_rate(playback_handle, hw_params, framerate, 0)) < 0) {
 		std::cerr << "cannot set sample rate (" << snd_strerror(err) << ")" << std::endl;
 		return -1;				
 	}
