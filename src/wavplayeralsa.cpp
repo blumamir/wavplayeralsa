@@ -5,6 +5,7 @@
 
 snd_pcm_t *playback_handle;
 short buf [4096 * 16];
+int channels = 1;
 char *buffer = NULL;
 size_t buf_size = 0;
 snd_pcm_sframes_t total_frames = 0;
@@ -29,7 +30,7 @@ int playback_callback(snd_pcm_sframes_t nframes) {
 	if( (err = snd_pcm_writei(playback_handle, buffer + offset, framesToWrite)) < 0) {
 		std::cerr << "write failed (" << snd_strerror(err) << ")" << std::endl;
 	}
-	offset += (err * 2 * 2);
+	offset += (err * channels * 2);
 	frames_offset += err;
 
 
@@ -59,7 +60,8 @@ int main(int argc, char *argv[]) {
 	std::cout << "Sections: " << sfinfo.sections << std::endl;
 	std::cout << "Format: " << sfinfo.format << std::endl;
 
-	buf_size = sfinfo.frames * sfinfo.channels * 2;
+	channels = sfinfo.channels;
+	buf_size = sfinfo.frames * channels * 2;
 	total_frames = sfinfo.frames;
     std::cout << "buffer size: " << buf_size << std::endl;
     buffer = new char[buf_size];
@@ -105,7 +107,7 @@ int main(int argc, char *argv[]) {
 		return -1;				
 	}
 
-	if( (err = snd_pcm_hw_params_set_channels(playback_handle, hw_params, 2)) < 0) {
+	if( (err = snd_pcm_hw_params_set_channels(playback_handle, hw_params, channels)) < 0) {
 		std::cerr << "cannot set channel count (" << snd_strerror(err) << ")" << std::endl;
 		return -1;				
 	}
