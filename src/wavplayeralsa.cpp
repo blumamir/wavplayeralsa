@@ -3,10 +3,19 @@
 #include <sndfile.h>
 #include <alsa/asoundlib.h>
 
+enum SampleType {
+	SampleTypeSigned = 0,
+	SampleTypeUnsigned = 1,
+	SampleTypeFloat = 2
+};
+SampleType sampleType = SampleTypeSigned;
+int sample_channel_size_bytes = 2;
+unsigned int framerate = 44100;
+bool is_endian_little = true; // if false the endian is big :)
+
 snd_pcm_t *playback_handle;
 short buf [4096 * 16];
 int channels = 1;
-unsigned int framerate = 44100;
 char *buffer = NULL;
 size_t buf_size = 0;
 snd_pcm_sframes_t total_frames = 0;
@@ -31,12 +40,131 @@ int playback_callback(snd_pcm_sframes_t nframes) {
 	if( (err = snd_pcm_writei(playback_handle, buffer + offset, framesToWrite)) < 0) {
 		std::cerr << "write failed (" << snd_strerror(err) << ")" << std::endl;
 	}
-	offset += (err * channels * 2);
+	offset += (err * channels * sample_channel_size_bytes);
 	frames_offset += err;
 
 
 	return err;
 }
+
+bool setFormat(int sndFileFormat) {
+
+	int majorType = sndFileFormat & SF_FORMAT_TYPEMASK;
+	int minorType = sndFileFormat & SF_FORMAT_SUBMASK;
+	std::cout << "wav format. major: 0x" << std::hex << majorType << " minor: 0x" << std::hex << minorType << std::endl;
+
+	switch(minorType) {
+		case SF_FORMAT_PCM_S8: 
+			sample_channel_size_bytes = 1;
+			sampleType = SampleTypeSigned;
+			break;
+		case SF_FORMAT_PCM_16: 
+			sample_channel_size_bytes = 2;
+			sampleType = SampleTypeSigned;
+			break;
+		case SF_FORMAT_PCM_24: 
+			sample_channel_size_bytes = 3;
+			sampleType = SampleTypeSigned;
+			break;
+		case SF_FORMAT_PCM_32: 
+			sample_channel_size_bytes = 4;
+			sampleType = SampleTypeSigned;
+			break;
+		case SF_FORMAT_FLOAT:
+			sample_channel_size_bytes = 4;
+			sampleType = SampleTypeFloat;
+			break;
+		case SF_FORMAT_DOUBLE:
+			sample_channel_size_bytes = 8;
+			sampleType = SampleTypeFloat;
+			break;
+		default:
+			std::cout << "the minor format for the wav file contains unsupported value: " << minorType << std::endl;
+			return false;
+	}
+
+	switch(majorType) {
+		case SF_FORMAT_WAV:
+			is_endian_little = true;
+			break;
+		case SF_FORMAT_AIFF:
+			is_endian_little = false;
+			break;
+		default:
+			std::cout << "the major format for the wav file contains unsupported value: " << majorType << std::endl;
+			return false;		
+	}
+
+	std::cout << "The wav file format contains " << sample_channel_size_bytes << " bytes per channel and is " << 
+		(is_endian_little ? "little" : "big") << " endian" << std::endl;
+
+	return true;
+}
+
+bool GetFormatForAlsa(snd_pcm_format_t &outFormat) {
+	switch(sampleType) {
+
+		case SampleTypeSigned: {
+			if(is_endian_little) {
+				switch(sample_channel_size_bytes) {
+					case 1: outFormat = SND_PCM_FORMAT_S8; return true;
+					case 2: outFormat = SND_PCM_FORMAT_S16_LE; return true;
+					case 3: outFormat = SND_PCM_FORMAT_S24_LE; return true;
+					case 4: outFormat = SND_PCM_FORMAT_S32_LE; return true;
+				}
+			}
+			else {
+				switch(sample_channel_size_bytes) {
+					case 1: outFormat = SND_PCM_FORMAT_S8; return true;
+					case 2: outFormat = SND_PCM_FORMAT_S16_BE; return true;
+					case 3: outFormat = SND_PCM_FORMAT_S24_BE; return true;
+					case 4: outFormat = SND_PCM_FORMAT_S32_BE; return true;
+				}
+			}
+		}
+		break;
+
+		case SampleTypeUnsigned: {
+			if(is_endian_little) {
+				switch(sample_channel_size_bytes) {
+					case 1: outFormat = SND_PCM_FORMAT_U8; return true;
+					case 2: outFormat = SND_PCM_FORMAT_U16_LE; return true;
+					case 3: outFormat = SND_PCM_FORMAT_U24_LE; return true;
+					case 4: outFormat = SND_PCM_FORMAT_U32_LE; return true;
+				}
+			}
+			else {
+				switch(sample_channel_size_bytes) {
+					case 1: outFormat = SND_PCM_FORMAT_U8; return true;
+					case 2: outFormat = SND_PCM_FORMAT_U16_BE; return true;
+					case 3: outFormat = SND_PCM_FORMAT_U24_BE; return true;
+					case 4: outFormat = SND_PCM_FORMAT_U32_BE; return true;
+				}
+			}
+		}
+		break;
+
+		case SampleTypeFloat: {
+			if(is_endian_little) {
+				switch(sample_channel_size_bytes) {
+					case 4: outFormat = SND_PCM_FORMAT_FLOAT_LE; return true;
+					case 8: outFormat = SND_PCM_FORMAT_FLOAT64_LE; return true;
+				}
+			}
+			else {
+				switch(sample_channel_size_bytes) {
+					case 4: outFormat = SND_PCM_FORMAT_FLOAT_BE; return true;
+					case 8: outFormat = SND_PCM_FORMAT_FLOAT64_BE; return true;
+				}
+			}			
+
+		}
+		break;
+
+	}
+	return false;
+}
+
 
 int main(int argc, char *argv[]) {
 
@@ -63,7 +191,10 @@ int main(int argc, char *argv[]) {
 
 	channels = sfinfo.channels;
 	framerate = sfinfo.samplerate;
-	buf_size = sfinfo.frames * channels * 2;
+	if(setFormat(sfinfo.format) == false) {
+		std::cerr << "the format of the current wav file is not supported" << std::endl;
+	}
+	buf_size = sfinfo.frames * channels * sample_channel_size_bytes;
 	total_frames = sfinfo.frames;
     std::cout << "buffer size: " << buf_size << std::endl;
     buffer = new char[buf_size];
@@ -98,7 +229,12 @@ int main(int argc, char *argv[]) {
 		return -1;				
 	}
 
-	if( (err = snd_pcm_hw_params_set_format(playback_handle, hw_params, SND_PCM_FORMAT_S16_LE)) < 0) {
+	snd_pcm_format_t alsaFormat;
+	if(GetFormatForAlsa(alsaFormat) != true) {
+		std::cerr << "the wav format is not supported by this player of alsa" << std::endl;
+		return -1;						
+	}
+	if( (err = snd_pcm_hw_params_set_format(playback_handle, hw_params, alsaFormat)) < 0) {
 		std::cerr << "cannot set sample format (" << snd_strerror(err) << ")" << std::endl;
 		return -1;				
 	}
@@ -149,6 +285,9 @@ int main(int argc, char *argv[]) {
 		std::cerr << "cannot set software parameters (" << snd_strerror(err) << ")" << std::endl;
 		return -1;				
 	}	
+
+	snd_pcm_sw_params_free(sw_params);
+	sw_params = NULL;
 
 	// main loop
 	if( (err = snd_pcm_prepare(playback_handle)) < 0) {
