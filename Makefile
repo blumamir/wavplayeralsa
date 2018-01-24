@@ -1,6 +1,6 @@
 CC := g++
 CFLAGS := -g -Wall -std=c++11
-LIBS := -lasound -lsndfile
+LIBS := -lasound -lsndfile -pthread
 
 ifdef DEBUG
   CFLAGS += -O0
@@ -8,15 +8,13 @@ else
   CFLAGS += -O3
 endif
 
-MAIN_SRCS = src/wavplayeralsa.cpp
+MAIN_SRCS = $(wildcard src/*.cpp)
 
 HEADERS = $(wildcard src/*.h)
 
-OBJECTS_SRC = $(wildcard src/*.cpp)
-OBJECTS_SRC_FILTERED = $(filter-out $(MAIN_SRCS), $(OBJECTS_SRC))
-
 OBJDIR := obj
 
+OBJECTS = wavplayeralsa.o single_file_player.o
 OBJECTS   := $(addprefix $(OBJDIR)/,$(OBJECTS))
 TARGETOBJ := $(OBJDIR)/src
 
@@ -32,17 +30,13 @@ wavplayeralsa: $(TRG_wavplayeralsa)
 default: all
 all: wavplayeralsa
 
-%.o: %.cc $(HEADERS)
+$(OBJDIR)/%.o: src/%.cpp $(HEADERS)
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(OBJDIR)/%.o: %.cpp $(HEADERS)
+$(TRG_wavplayeralsa): $(OBJECTS)
 	@mkdir -p $(@D)
-	$(CC) $(CFLAGS) -c $< -o $@
-
-$(TRG_wavplayeralsa): $(OBJECTS) $(TARGETOBJ)/wavplayeralsa.o
-	@mkdir -p $(@D)
-	$(CC) $(OBJECTS) $(TARGETOBJ)/wavplayeralsa.o $(LIBS) -o $@
+	$(CC) $(OBJECTS) $(LIBS) -o $@
 
 clean:
 	rm -rf $(OBJDIR)
