@@ -1,8 +1,8 @@
 
 #include "single_file_player.h"
+#include "position_reporter.h"
 #include <iostream>
 #include <sndfile.h>
-#include <alsa/asoundlib.h>
 
 
 int main(int argc, char *argv[]) {
@@ -26,10 +26,12 @@ int main(int argc, char *argv[]) {
 		return -1;
 	}
 	player.startPlay(0);
+
+	wavplayeralsa::PositionReporter pr;
 	while(true) {
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		unsigned int positionMs = player.getPositionInMs();
-		//std::cout << (positionMs / 1000.0) / 60.0 << std::endl;
+		pr.sendNewPosition(positionMs);
 	}
 
 	return 0;

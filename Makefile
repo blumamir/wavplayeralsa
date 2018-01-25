@@ -1,6 +1,6 @@
 CC := g++
 CFLAGS := -g -Wall -std=c++11
-LIBS := -lasound -lsndfile -pthread
+LIBS := -lasound -lsndfile -pthread -lprotobuf
 
 ifdef DEBUG
   CFLAGS += -O0
@@ -11,10 +11,11 @@ endif
 MAIN_SRCS = $(wildcard src/*.cpp)
 
 HEADERS = $(wildcard src/*.h)
+HEADERS := $(wildcard src/generated/*.h)
 
 OBJDIR := obj
 
-OBJECTS = wavplayeralsa.o single_file_player.o
+OBJECTS = wavplayeralsa.o single_file_player.o position_reporter.o position_report.pb.o
 OBJECTS   := $(addprefix $(OBJDIR)/,$(OBJECTS))
 TARGETOBJ := $(OBJDIR)/src
 
@@ -29,6 +30,10 @@ wavplayeralsa: $(TRG_wavplayeralsa)
 
 default: all
 all: wavplayeralsa
+
+$(OBJDIR)/%.o: src/generated/%.cc $(HEADERS)
+	@mkdir -p $(@D)
+	$(CC) $(CFLAGS) -c $< -o $@
 
 $(OBJDIR)/%.o: src/%.cpp $(HEADERS)
 	@mkdir -p $(@D)
