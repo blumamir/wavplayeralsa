@@ -1,6 +1,7 @@
 #ifndef __POSITION_REPORTER_H__
 #define __POSITION_REPORTER_H__
 
+#include <string>
 #include <netinet/in.h>
 
 namespace wavplayeralsa {
@@ -10,7 +11,7 @@ namespace wavplayeralsa {
 
 	public:
 		PositionReporter();
-		void sendNewPosition(unsigned int currPosition);
+		void sendNewPosition(unsigned int currPosition, const std::string &filename);
 
 	private:
 		int fd;
