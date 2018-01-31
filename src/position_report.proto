@@ -1,5 +1,5 @@
 
-message PositionReport {
+message PositionReportMsg {
 	
 	message Song {
 		required string song_name = 1;

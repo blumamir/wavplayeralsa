@@ -29,7 +29,7 @@ int main(int argc, char *argv[]) {
 
 	wavplayeralsa::PositionReporter pr;
 	while(true) {
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		std::this_thread::sleep_for(std::chrono::milliseconds(5));
 		unsigned int positionMs = player.getPositionInMs();
 		pr.sendNewPosition(positionMs, filename);
 	}

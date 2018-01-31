@@ -18,36 +18,36 @@ _sym_db = _symbol_database.Default()
 DESCRIPTOR = _descriptor.FileDescriptor(
   name='position_report.proto',
   package='',
-  serialized_pb=_b('\n\x15position_report.proto\"x\n\x0ePositionReport\x12#\n\x05songs\x18\x01 \x03(\x0b\x32\x14.PositionReport.Song\x1a\x41\n\x04Song\x12\x11\n\tsong_name\x18\x01 \x02(\t\x12\x16\n\x0eposition_in_ms\x18\x02 \x02(\r\x12\x0e\n\x06volume\x18\x03 \x02(\x01')
+  serialized_pb=_b('\n\x15position_report.proto\"~\n\x11PositionReportMsg\x12&\n\x05songs\x18\x01 \x03(\x0b\x32\x17.PositionReportMsg.Song\x1a\x41\n\x04Song\x12\x11\n\tsong_name\x18\x01 \x02(\t\x12\x16\n\x0eposition_in_ms\x18\x02 \x02(\r\x12\x0e\n\x06volume\x18\x03 \x02(\x01')
 )
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
 
 
 
-_POSITIONREPORT_SONG = _descriptor.Descriptor(
+_POSITIONREPORTMSG_SONG = _descriptor.Descriptor(
   name='Song',
-  full_name='PositionReport.Song',
+  full_name='PositionReportMsg.Song',
   filename=None,
   file=DESCRIPTOR,
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='song_name', full_name='PositionReport.Song.song_name', index=0,
+      name='song_name', full_name='PositionReportMsg.Song.song_name', index=0,
       number=1, type=9, cpp_type=9, label=2,
       has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
     _descriptor.FieldDescriptor(
-      name='position_in_ms', full_name='PositionReport.Song.position_in_ms', index=1,
+      name='position_in_ms', full_name='PositionReportMsg.Song.position_in_ms', index=1,
       number=2, type=13, cpp_type=3, label=2,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
     _descriptor.FieldDescriptor(
-      name='volume', full_name='PositionReport.Song.volume', index=2,
+      name='volume', full_name='PositionReportMsg.Song.volume', index=2,
       number=3, type=1, cpp_type=5, label=2,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
@@ -64,19 +64,19 @@ _POSITIONREPORT_SONG = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=80,
-  serialized_end=145,
+  serialized_start=86,
+  serialized_end=151,
 )
 
-_POSITIONREPORT = _descriptor.Descriptor(
-  name='PositionReport',
-  full_name='PositionReport',
+_POSITIONREPORTMSG = _descriptor.Descriptor(
+  name='PositionReportMsg',
+  full_name='PositionReportMsg',
   filename=None,
   file=DESCRIPTOR,
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='songs', full_name='PositionReport.songs', index=0,
+      name='songs', full_name='PositionReportMsg.songs', index=0,
       number=1, type=11, cpp_type=10, label=3,
       has_default_value=False, default_value=[],
       message_type=None, enum_type=None, containing_type=None,
@@ -85,7 +85,7 @@ _POSITIONREPORT = _descriptor.Descriptor(
   ],
   extensions=[
   ],
-  nested_types=[_POSITIONREPORT_SONG, ],
+  nested_types=[_POSITIONREPORTMSG_SONG, ],
   enum_types=[
   ],
   options=None,
@@ -94,27 +94,27 @@ _POSITIONREPORT = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=25,
-  serialized_end=145,
+  serialized_end=151,
 )
 
-_POSITIONREPORT_SONG.containing_type = _POSITIONREPORT
-_POSITIONREPORT.fields_by_name['songs'].message_type = _POSITIONREPORT_SONG
-DESCRIPTOR.message_types_by_name['PositionReport'] = _POSITIONREPORT
+_POSITIONREPORTMSG_SONG.containing_type = _POSITIONREPORTMSG
+_POSITIONREPORTMSG.fields_by_name['songs'].message_type = _POSITIONREPORTMSG_SONG
+DESCRIPTOR.message_types_by_name['PositionReportMsg'] = _POSITIONREPORTMSG
 
-PositionReport = _reflection.GeneratedProtocolMessageType('PositionReport', (_message.Message,), dict(
+PositionReportMsg = _reflection.GeneratedProtocolMessageType('PositionReportMsg', (_message.Message,), dict(
 
   Song = _reflection.GeneratedProtocolMessageType('Song', (_message.Message,), dict(
-    DESCRIPTOR = _POSITIONREPORT_SONG,
+    DESCRIPTOR = _POSITIONREPORTMSG_SONG,
     __module__ = 'position_report_pb2'
-    # @@protoc_insertion_point(class_scope:PositionReport.Song)
+    # @@protoc_insertion_point(class_scope:PositionReportMsg.Song)
     ))
   ,
-  DESCRIPTOR = _POSITIONREPORT,
+  DESCRIPTOR = _POSITIONREPORTMSG,
   __module__ = 'position_report_pb2'
-  # @@protoc_insertion_point(class_scope:PositionReport)
+  # @@protoc_insertion_point(class_scope:PositionReportMsg)
   ))
-_sym_db.RegisterMessage(PositionReport)
-_sym_db.RegisterMessage(PositionReport.Song)
+_sym_db.RegisterMessage(PositionReportMsg)
+_sym_db.RegisterMessage(PositionReportMsg.Song)
 
 
 # @@protoc_insertion_point(module_scope)

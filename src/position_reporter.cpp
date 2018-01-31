@@ -50,8 +50,8 @@ namespace wavplayeralsa {
 
 	void PositionReporter::sendNewPosition(unsigned int currPosition, const std::string &filename) {
 
-		PositionReport prProto;
-		PositionReport::Song *s = prProto.add_songs();
+		PositionReportMsg prProto;
+		PositionReportMsg::Song *s = prProto.add_songs();
 		s->set_song_name(filename);
 		s->set_position_in_ms(currPosition);
 		s->set_volume(1.0);

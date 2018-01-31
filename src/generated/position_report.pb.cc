@@ -18,12 +18,12 @@
 
 namespace {
 
-const ::google::protobuf::Descriptor* PositionReport_descriptor_ = NULL;
+const ::google::protobuf::Descriptor* PositionReportMsg_descriptor_ = NULL;
 const ::google::protobuf::internal::GeneratedMessageReflection*
-  PositionReport_reflection_ = NULL;
-const ::google::protobuf::Descriptor* PositionReport_Song_descriptor_ = NULL;
+  PositionReportMsg_reflection_ = NULL;
+const ::google::protobuf::Descriptor* PositionReportMsg_Song_descriptor_ = NULL;
 const ::google::protobuf::internal::GeneratedMessageReflection*
-  PositionReport_Song_reflection_ = NULL;
+  PositionReportMsg_Song_reflection_ = NULL;
 
 }  // namespace
 
@@ -34,38 +34,38 @@ void protobuf_AssignDesc_position_5freport_2eproto() {
     ::google::protobuf::DescriptorPool::generated_pool()->FindFileByName(
       "position_report.proto");
   GOOGLE_CHECK(file != NULL);
-  PositionReport_descriptor_ = file->message_type(0);
-  static const int PositionReport_offsets_[1] = {
-    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(PositionReport, songs_),
+  PositionReportMsg_descriptor_ = file->message_type(0);
+  static const int PositionReportMsg_offsets_[1] = {
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(PositionReportMsg, songs_),
   };
-  PositionReport_reflection_ =
+  PositionReportMsg_reflection_ =
     new ::google::protobuf::internal::GeneratedMessageReflection(
-      PositionReport_descriptor_,
-      PositionReport::default_instance_,
-      PositionReport_offsets_,
-      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(PositionReport, _has_bits_[0]),
-      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(PositionReport, _unknown_fields_),
+      PositionReportMsg_descriptor_,
+      PositionReportMsg::default_instance_,
+      PositionReportMsg_offsets_,
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(PositionReportMsg, _has_bits_[0]),
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(PositionReportMsg, _unknown_fields_),
       -1,
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
-      sizeof(PositionReport));
-  PositionReport_Song_descriptor_ = PositionReport_descriptor_->nested_type(0);
-  static const int PositionReport_Song_offsets_[3] = {
-    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(PositionReport_Song, song_name_),
-    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(PositionReport_Song, position_in_ms_),
-    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(PositionReport_Song, volume_),
+      sizeof(PositionReportMsg));
+  PositionReportMsg_Song_descriptor_ = PositionReportMsg_descriptor_->nested_type(0);
+  static const int PositionReportMsg_Song_offsets_[3] = {
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(PositionReportMsg_Song, song_name_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(PositionReportMsg_Song, position_in_ms_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(PositionReportMsg_Song, volume_),
   };
-  PositionReport_Song_reflection_ =
+  PositionReportMsg_Song_reflection_ =
     new ::google::protobuf::internal::GeneratedMessageReflection(
-      PositionReport_Song_descriptor_,
-      PositionReport_Song::default_instance_,
-      PositionReport_Song_offsets_,
-      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(PositionReport_Song, _has_bits_[0]),
-      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(PositionReport_Song, _unknown_fields_),
+      PositionReportMsg_Song_descriptor_,
+      PositionReportMsg_Song::default_instance_,
+      PositionReportMsg_Song_offsets_,
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(PositionReportMsg_Song, _has_bits_[0]),
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(PositionReportMsg_Song, _unknown_fields_),
       -1,
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
-      sizeof(PositionReport_Song));
+      sizeof(PositionReportMsg_Song));
 }
 
 namespace {
@@ -79,18 +79,18 @@ inline void protobuf_AssignDescriptorsOnce() {
 void protobuf_RegisterTypes(const ::std::string&) {
   protobuf_AssignDescriptorsOnce();
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
-    PositionReport_descriptor_, &PositionReport::default_instance());
+    PositionReportMsg_descriptor_, &PositionReportMsg::default_instance());
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
-    PositionReport_Song_descriptor_, &PositionReport_Song::default_instance());
+    PositionReportMsg_Song_descriptor_, &PositionReportMsg_Song::default_instance());
 }
 
 }  // namespace
 
 void protobuf_ShutdownFile_position_5freport_2eproto() {
-  delete PositionReport::default_instance_;
-  delete PositionReport_reflection_;
-  delete PositionReport_Song::default_instance_;
-  delete PositionReport_Song_reflection_;
+  delete PositionReportMsg::default_instance_;
+  delete PositionReportMsg_reflection_;
+  delete PositionReportMsg_Song::default_instance_;
+  delete PositionReportMsg_Song_reflection_;
 }
 
 void protobuf_AddDesc_position_5freport_2eproto() {
@@ -100,16 +100,16 @@ void protobuf_AddDesc_position_5freport_2eproto() {
   GOOGLE_PROTOBUF_VERIFY_VERSION;
 
   ::google::protobuf::DescriptorPool::InternalAddGeneratedFile(
-    "\n\025position_report.proto\"x\n\016PositionRepor"
-    "t\022#\n\005songs\030\001 \003(\0132\024.PositionReport.Song\032A"
-    "\n\004Song\022\021\n\tsong_name\030\001 \002(\t\022\026\n\016position_in"
-    "_ms\030\002 \002(\r\022\016\n\006volume\030\003 \002(\001", 145);
+    "\n\025position_report.proto\"~\n\021PositionRepor"
+    "tMsg\022&\n\005songs\030\001 \003(\0132\027.PositionReportMsg."
+    "Song\032A\n\004Song\022\021\n\tsong_name\030\001 \002(\t\022\026\n\016posit"
+    "ion_in_ms\030\002 \002(\r\022\016\n\006volume\030\003 \002(\001", 151);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "position_report.proto", &protobuf_RegisterTypes);
-  PositionReport::default_instance_ = new PositionReport();
-  PositionReport_Song::default_instance_ = new PositionReport_Song();
-  PositionReport::default_instance_->InitAsDefaultInstance();
-  PositionReport_Song::default_instance_->InitAsDefaultInstance();
+  PositionReportMsg::default_instance_ = new PositionReportMsg();
+  PositionReportMsg_Song::default_instance_ = new PositionReportMsg_Song();
+  PositionReportMsg::default_instance_->InitAsDefaultInstance();
+  PositionReportMsg_Song::default_instance_->InitAsDefaultInstance();
   ::google::protobuf::internal::OnShutdown(&protobuf_ShutdownFile_position_5freport_2eproto);
 }
 
@@ -123,28 +123,28 @@ struct StaticDescriptorInitializer_position_5freport_2eproto {
 // ===================================================================
 
 #ifndef _MSC_VER
-const int PositionReport_Song::kSongNameFieldNumber;
-const int PositionReport_Song::kPositionInMsFieldNumber;
-const int PositionReport_Song::kVolumeFieldNumber;
+const int PositionReportMsg_Song::kSongNameFieldNumber;
+const int PositionReportMsg_Song::kPositionInMsFieldNumber;
+const int PositionReportMsg_Song::kVolumeFieldNumber;
 #endif  // !_MSC_VER
 
-PositionReport_Song::PositionReport_Song()
+PositionReportMsg_Song::PositionReportMsg_Song()
   : ::google::protobuf::Message() {
   SharedCtor();
-  // @@protoc_insertion_point(constructor:PositionReport.Song)
+  // @@protoc_insertion_point(constructor:PositionReportMsg.Song)
 }
 
-void PositionReport_Song::InitAsDefaultInstance() {
+void PositionReportMsg_Song::InitAsDefaultInstance() {
 }
 
-PositionReport_Song::PositionReport_Song(const PositionReport_Song& from)
+PositionReportMsg_Song::PositionReportMsg_Song(const PositionReportMsg_Song& from)
   : ::google::protobuf::Message() {
   SharedCtor();
   MergeFrom(from);
-  // @@protoc_insertion_point(copy_constructor:PositionReport.Song)
+  // @@protoc_insertion_point(copy_constructor:PositionReportMsg.Song)
 }
 
-void PositionReport_Song::SharedCtor() {
+void PositionReportMsg_Song::SharedCtor() {
   ::google::protobuf::internal::GetEmptyString();
   _cached_size_ = 0;
   song_name_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
@@ -153,12 +153,12 @@ void PositionReport_Song::SharedCtor() {
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
 }
 
-PositionReport_Song::~PositionReport_Song() {
-  // @@protoc_insertion_point(destructor:PositionReport.Song)
+PositionReportMsg_Song::~PositionReportMsg_Song() {
+  // @@protoc_insertion_point(destructor:PositionReportMsg.Song)
   SharedDtor();
 }
 
-void PositionReport_Song::SharedDtor() {
+void PositionReportMsg_Song::SharedDtor() {
   if (song_name_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
     delete song_name_;
   }
@@ -166,30 +166,30 @@ void PositionReport_Song::SharedDtor() {
   }
 }
 
-void PositionReport_Song::SetCachedSize(int size) const {
+void PositionReportMsg_Song::SetCachedSize(int size) const {
   GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
   _cached_size_ = size;
   GOOGLE_SAFE_CONCURRENT_WRITES_END();
 }
-const ::google::protobuf::Descriptor* PositionReport_Song::descriptor() {
+const ::google::protobuf::Descriptor* PositionReportMsg_Song::descriptor() {
   protobuf_AssignDescriptorsOnce();
-  return PositionReport_Song_descriptor_;
+  return PositionReportMsg_Song_descriptor_;
 }
 
-const PositionReport_Song& PositionReport_Song::default_instance() {
+const PositionReportMsg_Song& PositionReportMsg_Song::default_instance() {
   if (default_instance_ == NULL) protobuf_AddDesc_position_5freport_2eproto();
   return *default_instance_;
 }
 
-PositionReport_Song* PositionReport_Song::default_instance_ = NULL;
+PositionReportMsg_Song* PositionReportMsg_Song::default_instance_ = NULL;
 
-PositionReport_Song* PositionReport_Song::New() const {
-  return new PositionReport_Song;
+PositionReportMsg_Song* PositionReportMsg_Song::New() const {
+  return new PositionReportMsg_Song;
 }
 
-void PositionReport_Song::Clear() {
+void PositionReportMsg_Song::Clear() {
 #define OFFSET_OF_FIELD_(f) (reinterpret_cast<char*>(      \
-  &reinterpret_cast<PositionReport_Song*>(16)->f) - \
+  &reinterpret_cast<PositionReportMsg_Song*>(16)->f) - \
    reinterpret_cast<char*>(16))
 
 #define ZR_(first, last) do {                              \
@@ -214,11 +214,11 @@ void PositionReport_Song::Clear() {
   mutable_unknown_fields()->Clear();
 }
 
-bool PositionReport_Song::MergePartialFromCodedStream(
+bool PositionReportMsg_Song::MergePartialFromCodedStream(
     ::google::protobuf::io::CodedInputStream* input) {
 #define DO_(EXPRESSION) if (!(EXPRESSION)) goto failure
   ::google::protobuf::uint32 tag;
-  // @@protoc_insertion_point(parse_start:PositionReport.Song)
+  // @@protoc_insertion_point(parse_start:PositionReportMsg.Song)
   for (;;) {
     ::std::pair< ::google::protobuf::uint32, bool> p = input->ReadTagWithCutoff(127);
     tag = p.first;
@@ -284,17 +284,17 @@ bool PositionReport_Song::MergePartialFromCodedStream(
     }
   }
 success:
-  // @@protoc_insertion_point(parse_success:PositionReport.Song)
+  // @@protoc_insertion_point(parse_success:PositionReportMsg.Song)
   return true;
 failure:
-  // @@protoc_insertion_point(parse_failure:PositionReport.Song)
+  // @@protoc_insertion_point(parse_failure:PositionReportMsg.Song)
   return false;
 #undef DO_
 }
 
-void PositionReport_Song::SerializeWithCachedSizes(
+void PositionReportMsg_Song::SerializeWithCachedSizes(
     ::google::protobuf::io::CodedOutputStream* output) const {
-  // @@protoc_insertion_point(serialize_start:PositionReport.Song)
+  // @@protoc_insertion_point(serialize_start:PositionReportMsg.Song)
   // required string song_name = 1;
   if (has_song_name()) {
     ::google::protobuf::internal::WireFormat::VerifyUTF8StringNamedField(
@@ -319,12 +319,12 @@ void PositionReport_Song::SerializeWithCachedSizes(
     ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
         unknown_fields(), output);
   }
-  // @@protoc_insertion_point(serialize_end:PositionReport.Song)
+  // @@protoc_insertion_point(serialize_end:PositionReportMsg.Song)
 }
 
-::google::protobuf::uint8* PositionReport_Song::SerializeWithCachedSizesToArray(
+::google::protobuf::uint8* PositionReportMsg_Song::SerializeWithCachedSizesToArray(
     ::google::protobuf::uint8* target) const {
-  // @@protoc_insertion_point(serialize_to_array_start:PositionReport.Song)
+  // @@protoc_insertion_point(serialize_to_array_start:PositionReportMsg.Song)
   // required string song_name = 1;
   if (has_song_name()) {
     ::google::protobuf::internal::WireFormat::VerifyUTF8StringNamedField(
@@ -350,11 +350,11 @@ void PositionReport_Song::SerializeWithCachedSizes(
     target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
         unknown_fields(), target);
   }
-  // @@protoc_insertion_point(serialize_to_array_end:PositionReport.Song)
+  // @@protoc_insertion_point(serialize_to_array_end:PositionReportMsg.Song)
   return target;
 }
 
-int PositionReport_Song::ByteSize() const {
+int PositionReportMsg_Song::ByteSize() const {
   int total_size = 0;
 
   if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
@@ -389,10 +389,10 @@ int PositionReport_Song::ByteSize() const {
   return total_size;
 }
 
-void PositionReport_Song::MergeFrom(const ::google::protobuf::Message& from) {
+void PositionReportMsg_Song::MergeFrom(const ::google::protobuf::Message& from) {
   GOOGLE_CHECK_NE(&from, this);
-  const PositionReport_Song* source =
-    ::google::protobuf::internal::dynamic_cast_if_available<const PositionReport_Song*>(
+  const PositionReportMsg_Song* source =
+    ::google::protobuf::internal::dynamic_cast_if_available<const PositionReportMsg_Song*>(
       &from);
   if (source == NULL) {
     ::google::protobuf::internal::ReflectionOps::Merge(from, this);
@@ -401,7 +401,7 @@ void PositionReport_Song::MergeFrom(const ::google::protobuf::Message& from) {
   }
 }
 
-void PositionReport_Song::MergeFrom(const PositionReport_Song& from) {
+void PositionReportMsg_Song::MergeFrom(const PositionReportMsg_Song& from) {
   GOOGLE_CHECK_NE(&from, this);
   if (from._has_bits_[0 / 32] & (0xffu << (0 % 32))) {
     if (from.has_song_name()) {
@@ -417,25 +417,25 @@ void PositionReport_Song::MergeFrom(const PositionReport_Song& from) {
   mutable_unknown_fields()->MergeFrom(from.unknown_fields());
 }
 
-void PositionReport_Song::CopyFrom(const ::google::protobuf::Message& from) {
+void PositionReportMsg_Song::CopyFrom(const ::google::protobuf::Message& from) {
   if (&from == this) return;
   Clear();
   MergeFrom(from);
 }
 
-void PositionReport_Song::CopyFrom(const PositionReport_Song& from) {
+void PositionReportMsg_Song::CopyFrom(const PositionReportMsg_Song& from) {
   if (&from == this) return;
   Clear();
   MergeFrom(from);
 }
 
-bool PositionReport_Song::IsInitialized() const {
+bool PositionReportMsg_Song::IsInitialized() const {
   if ((_has_bits_[0] & 0x00000007) != 0x00000007) return false;
 
   return true;
 }
 
-void PositionReport_Song::Swap(PositionReport_Song* other) {
+void PositionReportMsg_Song::Swap(PositionReportMsg_Song* other) {
   if (other != this) {
     std::swap(song_name_, other->song_name_);
     std::swap(position_in_ms_, other->position_in_ms_);
@@ -446,11 +446,11 @@ void PositionReport_Song::Swap(PositionReport_Song* other) {
   }
 }
 
-::google::protobuf::Metadata PositionReport_Song::GetMetadata() const {
+::google::protobuf::Metadata PositionReportMsg_Song::GetMetadata() const {
   protobuf_AssignDescriptorsOnce();
   ::google::protobuf::Metadata metadata;
-  metadata.descriptor = PositionReport_Song_descriptor_;
-  metadata.reflection = PositionReport_Song_reflection_;
+  metadata.descriptor = PositionReportMsg_Song_descriptor_;
+  metadata.reflection = PositionReportMsg_Song_reflection_;
   return metadata;
 }
 
@@ -458,78 +458,78 @@ void PositionReport_Song::Swap(PositionReport_Song* other) {
 // -------------------------------------------------------------------
 
 #ifndef _MSC_VER
-const int PositionReport::kSongsFieldNumber;
+const int PositionReportMsg::kSongsFieldNumber;
 #endif  // !_MSC_VER
 
-PositionReport::PositionReport()
+PositionReportMsg::PositionReportMsg()
   : ::google::protobuf::Message() {
   SharedCtor();
-  // @@protoc_insertion_point(constructor:PositionReport)
+  // @@protoc_insertion_point(constructor:PositionReportMsg)
 }
 
-void PositionReport::InitAsDefaultInstance() {
+void PositionReportMsg::InitAsDefaultInstance() {
 }
 
-PositionReport::PositionReport(const PositionReport& from)
+PositionReportMsg::PositionReportMsg(const PositionReportMsg& from)
   : ::google::protobuf::Message() {
   SharedCtor();
   MergeFrom(from);
-  // @@protoc_insertion_point(copy_constructor:PositionReport)
+  // @@protoc_insertion_point(copy_constructor:PositionReportMsg)
 }
 
-void PositionReport::SharedCtor() {
+void PositionReportMsg::SharedCtor() {
   _cached_size_ = 0;
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
 }
 
-PositionReport::~PositionReport() {
-  // @@protoc_insertion_point(destructor:PositionReport)
+PositionReportMsg::~PositionReportMsg() {
+  // @@protoc_insertion_point(destructor:PositionReportMsg)
   SharedDtor();
 }
 
-void PositionReport::SharedDtor() {
+void PositionReportMsg::SharedDtor() {
   if (this != default_instance_) {
   }
 }
 
-void PositionReport::SetCachedSize(int size) const {
+void PositionReportMsg::SetCachedSize(int size) const {
   GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
   _cached_size_ = size;
   GOOGLE_SAFE_CONCURRENT_WRITES_END();
 }
-const ::google::protobuf::Descriptor* PositionReport::descriptor() {
+const ::google::protobuf::Descriptor* PositionReportMsg::descriptor() {
   protobuf_AssignDescriptorsOnce();
-  return PositionReport_descriptor_;
+  return PositionReportMsg_descriptor_;
 }
 
-const PositionReport& PositionReport::default_instance() {
+const PositionReportMsg& PositionReportMsg::default_instance() {
   if (default_instance_ == NULL) protobuf_AddDesc_position_5freport_2eproto();
   return *default_instance_;
 }
 
-PositionReport* PositionReport::default_instance_ = NULL;
+PositionReportMsg* PositionReportMsg::default_instance_ = NULL;
 
-PositionReport* PositionReport::New() const {
-  return new PositionReport;
+PositionReportMsg* PositionReportMsg::New() const {
+  return new PositionReportMsg;
 }
 
-void PositionReport::Clear() {
+void PositionReportMsg::Clear() {
   songs_.Clear();
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
   mutable_unknown_fields()->Clear();
 }
 
-bool PositionReport::MergePartialFromCodedStream(
+bool PositionReportMsg::MergePartialFromCodedStream(
     ::google::protobuf::io::CodedInputStream* input) {
 #define DO_(EXPRESSION) if (!(EXPRESSION)) goto failure
   ::google::protobuf::uint32 tag;
-  // @@protoc_insertion_point(parse_start:PositionReport)
+  // @@protoc_insertion_point(parse_start:PositionReportMsg)
   for (;;) {
     ::std::pair< ::google::protobuf::uint32, bool> p = input->ReadTagWithCutoff(127);
     tag = p.first;
     if (!p.second) goto handle_unusual;
     switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
-      // repeated .PositionReport.Song songs = 1;
+      // repeated .PositionReportMsg.Song songs = 1;
       case 1: {
         if (tag == 10) {
          parse_songs:
@@ -557,18 +557,18 @@ bool PositionReport::MergePartialFromCodedStream(
     }
   }
 success:
-  // @@protoc_insertion_point(parse_success:PositionReport)
+  // @@protoc_insertion_point(parse_success:PositionReportMsg)
   return true;
 failure:
-  // @@protoc_insertion_point(parse_failure:PositionReport)
+  // @@protoc_insertion_point(parse_failure:PositionReportMsg)
   return false;
 #undef DO_
 }
 
-void PositionReport::SerializeWithCachedSizes(
+void PositionReportMsg::SerializeWithCachedSizes(
     ::google::protobuf::io::CodedOutputStream* output) const {
-  // @@protoc_insertion_point(serialize_start:PositionReport)
-  // repeated .PositionReport.Song songs = 1;
+  // @@protoc_insertion_point(serialize_start:PositionReportMsg)
+  // repeated .PositionReportMsg.Song songs = 1;
   for (int i = 0; i < this->songs_size(); i++) {
     ::google::protobuf::internal::WireFormatLite::WriteMessageMaybeToArray(
       1, this->songs(i), output);
@@ -578,13 +578,13 @@ void PositionReport::SerializeWithCachedSizes(
     ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
         unknown_fields(), output);
   }
-  // @@protoc_insertion_point(serialize_end:PositionReport)
+  // @@protoc_insertion_point(serialize_end:PositionReportMsg)
 }
 
-::google::protobuf::uint8* PositionReport::SerializeWithCachedSizesToArray(
+::google::protobuf::uint8* PositionReportMsg::SerializeWithCachedSizesToArray(
     ::google::protobuf::uint8* target) const {
-  // @@protoc_insertion_point(serialize_to_array_start:PositionReport)
-  // repeated .PositionReport.Song songs = 1;
+  // @@protoc_insertion_point(serialize_to_array_start:PositionReportMsg)
+  // repeated .PositionReportMsg.Song songs = 1;
   for (int i = 0; i < this->songs_size(); i++) {
     target = ::google::protobuf::internal::WireFormatLite::
       WriteMessageNoVirtualToArray(
@@ -595,14 +595,14 @@ void PositionReport::SerializeWithCachedSizes(
     target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
         unknown_fields(), target);
   }
-  // @@protoc_insertion_point(serialize_to_array_end:PositionReport)
+  // @@protoc_insertion_point(serialize_to_array_end:PositionReportMsg)
   return target;
 }
 
-int PositionReport::ByteSize() const {
+int PositionReportMsg::ByteSize() const {
   int total_size = 0;
 
-  // repeated .PositionReport.Song songs = 1;
+  // repeated .PositionReportMsg.Song songs = 1;
   total_size += 1 * this->songs_size();
   for (int i = 0; i < this->songs_size(); i++) {
     total_size +=
@@ -621,10 +621,10 @@ int PositionReport::ByteSize() const {
   return total_size;
 }
 
-void PositionReport::MergeFrom(const ::google::protobuf::Message& from) {
+void PositionReportMsg::MergeFrom(const ::google::protobuf::Message& from) {
   GOOGLE_CHECK_NE(&from, this);
-  const PositionReport* source =
-    ::google::protobuf::internal::dynamic_cast_if_available<const PositionReport*>(
+  const PositionReportMsg* source =
+    ::google::protobuf::internal::dynamic_cast_if_available<const PositionReportMsg*>(
       &from);
   if (source == NULL) {
     ::google::protobuf::internal::ReflectionOps::Merge(from, this);
@@ -633,31 +633,31 @@ void PositionReport::MergeFrom(const ::google::protobuf::Message& from) {
   }
 }
 
-void PositionReport::MergeFrom(const PositionReport& from) {
+void PositionReportMsg::MergeFrom(const PositionReportMsg& from) {
   GOOGLE_CHECK_NE(&from, this);
   songs_.MergeFrom(from.songs_);
   mutable_unknown_fields()->MergeFrom(from.unknown_fields());
 }
 
-void PositionReport::CopyFrom(const ::google::protobuf::Message& from) {
+void PositionReportMsg::CopyFrom(const ::google::protobuf::Message& from) {
   if (&from == this) return;
   Clear();
   MergeFrom(from);
 }
 
-void PositionReport::CopyFrom(const PositionReport& from) {
+void PositionReportMsg::CopyFrom(const PositionReportMsg& from) {
   if (&from == this) return;
   Clear();
   MergeFrom(from);
 }
 
-bool PositionReport::IsInitialized() const {
+bool PositionReportMsg::IsInitialized() const {
 
   if (!::google::protobuf::internal::AllAreInitialized(this->songs())) return false;
   return true;
 }
 
-void PositionReport::Swap(PositionReport* other) {
+void PositionReportMsg::Swap(PositionReportMsg* other) {
   if (other != this) {
     songs_.Swap(&other->songs_);
     std::swap(_has_bits_[0], other->_has_bits_[0]);
@@ -666,11 +666,11 @@ void PositionReport::Swap(PositionReport* other) {
   }
 }
 
-::google::protobuf::Metadata PositionReport::GetMetadata() const {
+::google::protobuf::Metadata PositionReportMsg::GetMetadata() const {
   protobuf_AssignDescriptorsOnce();
   ::google::protobuf::Metadata metadata;
-  metadata.descriptor = PositionReport_descriptor_;
-  metadata.reflection = PositionReport_reflection_;
+  metadata.descriptor = PositionReportMsg_descriptor_;
+  metadata.reflection = PositionReportMsg_reflection_;
   return metadata;
 }
 
