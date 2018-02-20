@@ -1,6 +1,6 @@
 CC := g++
 CFLAGS := -g -Wall -std=c++11
-LIBS := -lasound -lsndfile -pthread -lprotobuf
+LIBS := -lasound -lsndfile -pthread -lprotobuf -lzmq
 
 ifdef DEBUG
   CFLAGS += -O0

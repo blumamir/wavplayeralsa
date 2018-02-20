@@ -4,6 +4,11 @@
 #include <iostream>
 #include <sndfile.h>
 
+#include <zmq.hpp>
+#include <string>
+#include <iostream>
+#include <unistd.h>
+
 
 int main(int argc, char *argv[]) {
 
@@ -12,6 +17,11 @@ int main(int argc, char *argv[]) {
 		return -1;
 	}
 
+	zmq::context_t context(1);
+	zmq::socket_t socket(context, ZMQ_REP);
+	int rcvtimeo = 5;
+	socket.setsockopt(ZMQ_RCVTIMEO, &rcvtimeo, sizeof(int));
+	socket.bind("tcp://*:5555");
 
 	const char *filename = argv[1];
 
@@ -29,9 +39,21 @@ int main(int argc, char *argv[]) {
 
 	wavplayeralsa::PositionReporter pr;
 	while(true) {
-		std::this_thread::sleep_for(std::chrono::milliseconds(5));
-		unsigned int positionMs = player.getPositionInMs();
-		pr.sendNewPosition(positionMs, filename);
+
+		zmq::message_t request;
+		int rc = socket.recv(&request);
+		if(rc == 0) {
+			unsigned int positionMs = player.getPositionInMs();
+			pr.sendNewPosition(positionMs, filename);			
+		}
+		else {
+			std::cout << "Got message" << std::endl;
+			zmq::message_t reply(5);
+			memcpy(reply.data(), "OK", 5);
+			socket.send(reply);
+		}
+
+		//std::this_thread::sleep_for(std::chrono::milliseconds(5));
 	}
 
 	return 0;
