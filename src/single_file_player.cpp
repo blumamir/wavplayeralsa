@@ -30,6 +30,21 @@ namespace wavplayeralsa {
 
 		while(1) {
 
+			m_playStatusMutex.lock();
+			if(m_playStatus != Playing) {
+				int err;
+				std::stringstream errDesc;
+				if( (err = snd_pcm_drop(m_alsaPlaybackHandle)) < 0 ) {
+					errDesc << "snd_pcm_drop failed (" << snd_strerror(err) << ")";
+					m_playStatusMutex.unlock();
+					throw std::runtime_error(errDesc.str());
+				}
+				m_playStatus = Stopped;
+				m_playStatusMutex.unlock();
+				return;
+			}
+			m_playStatusMutex.unlock();
+
 			if( (err = snd_pcm_wait(m_alsaPlaybackHandle, 1000)) < 0) {
 				std::cerr << "pool failed (" << snd_strerror(err) << ")" << std::endl;
 				break;
@@ -51,7 +66,7 @@ namespace wavplayeralsa {
 
 			int remainingFrames = m_totalFrames - m_currPositionInFrames;
 			if(remainingFrames <= 0) {
-				std::cout << "done playing current wav file" << std::endl;
+				std::cout << "done writing frames to pcm" << std::endl;
 				break;
 			}
 			if(remainingFrames < framesToDeliver) {
@@ -70,12 +85,23 @@ namespace wavplayeralsa {
 			m_currPositionMutex.unlock();
 
 		}
+
+		std::cout << "done playing current wav file" << std::endl;
+
 	}
 
 	unsigned int SingleFilePlayer::getPositionInMs() {
 		int err;
 	 	snd_pcm_sframes_t delay;
 	 	snd_pcm_sframes_t posInFrames;
+
+	 	m_playStatusMutex.lock();
+	 	if(m_playStatus != Playing) {
+	 		m_playStatusMutex.unlock();
+	 		return -1;
+	 	}
+	 	m_playStatusMutex.unlock();
+
 
  		m_currPositionMutex.lock();
  		{
@@ -90,11 +116,38 @@ namespace wavplayeralsa {
 	}
 
 	void SingleFilePlayer::startPlay(unsigned int positionInMs) {
+
 		m_currPositionInFrames = (positionInMs / 1000.0) * m_frameRate; 
 		if(m_currPositionInFrames > m_totalFrames) {
 			m_currPositionInFrames = m_totalFrames;
 		}
+
+		stop();
+
+		int err;
+		std::stringstream errDesc;
+		if( (err = snd_pcm_prepare(m_alsaPlaybackHandle)) < 0 ) {
+			errDesc << "snd_pcm_prepare failed (" << snd_strerror(err) << ")";
+			m_playStatusMutex.unlock();
+			throw std::runtime_error(errDesc.str());
+		}
+
+		m_playStatus = PlayStatus::Playing;
 		m_playingThread = new std::thread(&SingleFilePlayer::playLoopOnThread, this);
+	}
+
+	void SingleFilePlayer::stop() {
+		m_playStatusMutex.lock();
+		if(m_playStatus == Stopped) {
+			m_playStatusMutex.unlock();			
+			return;
+		}
+		m_playStatus = Stopping;
+		m_playStatusMutex.unlock();
+
+		m_playingThread->join();
+		delete m_playingThread;
+		m_playingThread = nullptr;
 	}
 
 	void SingleFilePlayer::initialize() {

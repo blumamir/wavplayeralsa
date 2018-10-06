@@ -58,7 +58,7 @@ namespace wavplayeralsa {
 		std::string outputBuf;
 		prProto.SerializeToString(&outputBuf);
 
-		std::cout << "current position: " << currPosition << " (ms) and " << currPosition / 1000.0 / 60.0 << " (minutes)" << std::endl;
+		//std::cout << "current position: " << currPosition << " (ms) and " << currPosition / 1000.0 / 60.0 << " (minutes)" << std::endl;
 
 		if (sendto(fd,outputBuf.c_str(),outputBuf.length(),0,(struct sockaddr *) &addr,
 			sizeof(addr)) < 0) {

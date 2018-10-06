@@ -1,6 +1,7 @@
 
 #include "single_file_player.h"
 #include "position_reporter.h"
+#include "generated/player_command.pb.h"
 #include <iostream>
 #include <sndfile.h>
 
@@ -47,7 +48,16 @@ int main(int argc, char *argv[]) {
 			pr.sendNewPosition(positionMs, filename);			
 		}
 		else {
-			std::cout << "Got message" << std::endl;
+			PlayerCommandMsg reqMsg;
+			std::string msgStr(static_cast<char*>(request.data()), request.size());
+			reqMsg.ParseFromString(msgStr);
+			if(reqMsg.has_stop_play()) {
+				player.stop();
+			}
+			if(reqMsg.has_new_song_request()) {
+				player.startPlay(reqMsg.new_song_request().position_in_ms());
+			}
+			std::cout << "Got message " << std::endl << reqMsg.DebugString() << std::endl;
 			zmq::message_t reply(5);
 			memcpy(reply.data(), "OK", 5);
 			socket.send(reply);

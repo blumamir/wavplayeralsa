@@ -15,7 +15,7 @@ HEADERS := $(wildcard src/generated/*.h)
 
 OBJDIR := obj
 
-OBJECTS = wavplayeralsa.o single_file_player.o position_reporter.o position_report.pb.o
+OBJECTS = wavplayeralsa.o single_file_player.o position_reporter.o position_report.pb.o player_command.pb.o
 OBJECTS   := $(addprefix $(OBJDIR)/,$(OBJECTS))
 TARGETOBJ := $(OBJDIR)/src
 

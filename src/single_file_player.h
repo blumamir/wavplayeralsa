@@ -16,12 +16,20 @@ namespace wavplayeralsa {
 	class SingleFilePlayer {
 
 	public:
+		enum PlayStatus {
+			Playing = 0,
+			Stopping = 1,
+			Stopped = 2
+		};
+
+	public:
 
 		~SingleFilePlayer();
 
 		void setFileToPlay(const std::string &fullFileName);
 		void initialize();
 		void startPlay(unsigned int positionInMs);
+		void stop();
 		unsigned int getPositionInMs();
 
 	private:
@@ -56,6 +64,10 @@ namespace wavplayeralsa {
 		snd_pcm_sframes_t m_currPositionInFrames = 0;
 		std::mutex m_currPositionMutex;
 		bool m_alsaInitialized = false;
+
+	private:
+		PlayStatus m_playStatus = Stopped;
+		std::mutex m_playStatusMutex;
 
 	private:
 		std::thread *m_playingThread = NULL;
