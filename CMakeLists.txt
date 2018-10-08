@@ -16,9 +16,6 @@ if(NOT Protobuf_FOUND)
 	message(FATAL_ERROR "Protobuf wat not found. Probably not installed. Install it, then run CMake again")
 endif()
 
-# sndFile dependency
-find_package(SndFile REQUIRED)
-
 set (SOURCES 
 	src/wavplayeralsa.cpp 
 	src/single_file_player.cpp 
