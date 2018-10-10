@@ -24,6 +24,10 @@ namespace wavplayeralsa {
 		m_fileToPlay = fullFileName;
 	}
 
+	const std::string &SingleFilePlayer::getFileToPlay() { 
+		return m_fileToPlay; 
+	}
+
 	void SingleFilePlayer::playLoopOnThread() {
 
 		int err;
@@ -159,7 +163,7 @@ namespace wavplayeralsa {
 		SndfileHandle sndFile = SndfileHandle(m_fileToPlay);
 		if(sndFile.error() != 0) {
 			std::stringstream errorDesc;
-			errorDesc << "The wav file '" << m_fileToPlay << "' cannot be opened. error msg: '" << sndFile.strError() << "'";
+			errorDesc << "The file '" << m_fileToPlay << "' cannot be opened. error msg: '" << sndFile.strError() << "'";
 			throw std::runtime_error(errorDesc.str());
 		}
 

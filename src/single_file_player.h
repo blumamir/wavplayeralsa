@@ -27,6 +27,7 @@ namespace wavplayeralsa {
 		~SingleFilePlayer();
 
 		void setFileToPlay(const std::string &fullFileName);
+		const std::string &getFileToPlay();
 		void initialize();
 		void startPlay(unsigned int positionInMs);
 		void stop();
