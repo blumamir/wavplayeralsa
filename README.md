@@ -1,21 +1,32 @@
 # wavplayeralsa
-
-
-Installation process for the player on Linux Ubuntu, tested on 18.04
-1. Install compiler: sudo apt install build-essential
-2. Install Git: sudo apt install git
-3. Clone the project
-4. Install CMake
-5. Install zmq
-  ./configure
-  make
-  make install
-6. sudo apt-get install libzmq3-dev
-7. Install zmqcpp using cmake
-8. Install Protobuf 2.6.1
+## Installation process (tested on Raspbian and Ubuntu)
+0. Install Raspbian https://www.raspberrypi.org/documentation/installation/installing-images/
+1. Install protobuf 2.6.1
   wget https://github.com/protocolbuffers/protobuf/releases/download/v2.6.1/protobuf-2.6.1.tar.gz
-  build protobuf according to instructions
-  https://github.com/protocolbuffers/protobuf/blob/master/src/README.md
-9. Install sndfile and libsound libs
+  tar -xvzf protobuf-2.6.1.tar.gz
+   cd protobuf-2.6.1/
+   ./configure
+   make
+   make check
+   sudo make install
+   sudo ldconfig
+2. Install zmq
+  sudo apt-get install libzmq3-dev
+3. Install cppzmq using cmake
+  wget https://github.com/zeromq/cppzmq/archive/v4.3.0.tar.gz
+  tar xzvf v4.3.0.tar.gz
+  cd cppzmq-4.3.0/
+  mkdir build
+  cd build/
+  sudo apt-get install cmake
+  cmake ..
+  sudo make -j4 install
+  cd ../..
+4. Install sndfile and libsound libs
   sudo apt-get install libsndfile1-dev libasound2-dev
-10. Install wavplayeralsa
+5. Clone the wavplayeralsa project and compile it
+  git clone https://github.com/BlumAmir/wavplayeralsa.git
+  cd wavplayeralsa/
+  cmake .
+  make
+6. Create a configuration file for the player
