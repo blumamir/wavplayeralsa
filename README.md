@@ -24,12 +24,19 @@
   cd ../..
 4. Install sndfile and libsound libs
   sudo apt-get install libsndfile1-dev libasound2-dev
-5. Clone the wavplayeralsa project and compile it
+5. Install cxxopts lib
+  wget https://github.com/jarro2783/cxxopts/archive/v2.1.1.tar.gz
+  tar xzvf v2.1.1.tar.gz
+  cd cxxopts-2.1.1
+  cmake .
+  make -j4
+  sudo make -j4 install
+6. Clone the wavplayeralsa project and compile it
   git clone https://github.com/BlumAmir/wavplayeralsa.git
   cd wavplayeralsa/
   cmake .
   make
-6. Create a configuration file for the player
+7. Create a configuration file for the player
 
 ## Player description
 1. The player is a wav files audio player intended for accurate position tracking. 
