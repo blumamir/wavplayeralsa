@@ -48,7 +48,7 @@ namespace wavplayeralsa {
 		}*/
 	}
 
-	void PositionReporter::sendNewPosition(unsigned int currPosition, const std::string &filename) {
+	void PositionReporter::sendNewPosition(const std::string &filename, unsigned int currPosition) {
 
 		PositionReportMsg prProto;
 		PositionReportMsg::Song *s = prProto.add_songs();
@@ -60,6 +60,17 @@ namespace wavplayeralsa {
 
 		//std::cout << "current position: " << currPosition << " (ms) and " << currPosition / 1000.0 / 60.0 << " (minutes)" << std::endl;
 
+		if (sendto(fd,outputBuf.c_str(),outputBuf.length(),0,(struct sockaddr *) &addr,
+			sizeof(addr)) < 0) {
+			perror("sendto");
+			exit(1);
+		}
+	}
+
+	void PositionReporter::sendNoTracksPlaying() {
+		PositionReportMsg prProto;
+		std::string outputBuf;
+		prProto.SerializeToString(&outputBuf);		
 		if (sendto(fd,outputBuf.c_str(),outputBuf.length(),0,(struct sockaddr *) &addr,
 			sizeof(addr)) < 0) {
 			perror("sendto");

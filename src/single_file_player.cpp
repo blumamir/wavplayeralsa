@@ -119,6 +119,10 @@ namespace wavplayeralsa {
 		return (posInFrames * 1000) / m_frameRate;
 	}
 
+	bool SingleFilePlayer::isPlaying() {
+		return snd_pcm_state(m_alsaPlaybackHandle) == SND_PCM_STATE_RUNNING;
+	}
+
 	void SingleFilePlayer::startPlay(unsigned int positionInMs) {
 
 		m_currPositionInFrames = (positionInMs / 1000.0) * m_frameRate; 

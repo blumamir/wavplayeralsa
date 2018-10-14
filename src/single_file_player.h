@@ -32,6 +32,7 @@ namespace wavplayeralsa {
 		void startPlay(unsigned int positionInMs);
 		void stop();
 		unsigned int getPositionInMs();
+		bool isPlaying();
 
 	private:
 		void initSndFile();

@@ -25,4 +25,4 @@ set (SOURCES
 )
 
 add_executable (wavplayeralsa ${SOURCES})
-target_link_libraries(wavplayeralsa -lasound -lsndfile -pthread ${cppzmq_LIBRARY} ${PROTOBUF_LIBRARY})
+target_link_libraries(wavplayeralsa -lasound -lsndfile -pthread cppzmq ${PROTOBUF_LIBRARY})

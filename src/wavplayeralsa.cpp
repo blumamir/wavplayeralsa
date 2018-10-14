@@ -45,8 +45,13 @@ int main(int argc, char *argv[]) {
 		bool gotMsg = socket.recv(&request);
 		if(!gotMsg) {
 			if(player != NULL) {
-				unsigned int positionMs = player->getPositionInMs();
-				pr.sendNewPosition(positionMs, player->getFileToPlay());			
+				if(player->isPlaying()) {
+					unsigned int positionMs = player->getPositionInMs();
+					pr.sendNewPosition(player->getFileToPlay(), positionMs);			
+				}
+				else {
+					pr.sendNoTracksPlaying();								
+				}
 			}
 		}
 		else {

@@ -11,7 +11,8 @@ namespace wavplayeralsa {
 
 	public:
 		PositionReporter();
-		void sendNewPosition(unsigned int currPosition, const std::string &filename);
+		void sendNewPosition(const std::string &filename, unsigned int currPosition);
+		void sendNoTracksPlaying();
 
 	private:
 		int fd;
