@@ -1,22 +1,24 @@
 #include "position_reporter.h"
 
+#include "generated/position_report.pb.h"
+
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <time.h>
 #include <string.h>
 #include <stdio.h>
-
-#include "generated/position_report.pb.h"
-
-
-#define HELLO_PORT 2001
-
 #include <iostream>
+
 
 namespace wavplayeralsa {
 
 	PositionReporter::PositionReporter() {
+
+	}
+
+	void PositionReporter::initialize(uint16_t broadcastPort) {
+		m_broadcastPort = broadcastPort;
 
 /* create what looks like an ordinary UDP socket */
 		if ((fd=socket(AF_INET,SOCK_DGRAM,0)) < 0) {
@@ -31,20 +33,12 @@ namespace wavplayeralsa {
 			exit(1);			
 		}
 
-/* set up destination address */
-		// memset(&addr,0,sizeof(addr));
+		/* set up destination address */
+		memset(&addr,0,sizeof(addr));
 		addr.sin_family=AF_INET;
 		addr.sin_addr.s_addr=htonl(INADDR_BROADCAST);
-		addr.sin_port=htons(HELLO_PORT);
+		addr.sin_port=htons(m_broadcastPort);
 
-		/*localInterface.s_addr = inet_addr("10.0.0.103");
-		if(setsockopt(fd, IPPROTO_IP, IP_MULTICAST_IF, (char *)&localInterface, sizeof(localInterface)) < 0) {
-			perror("setting local interface error");
-			exit(1);
-		}
-		else {
-			std::cout << "setting the local interface... OK" << std::endl;
-		}*/
 	}
 
 	void PositionReporter::sendNewPosition(const std::string &filename, unsigned int currPosition) {

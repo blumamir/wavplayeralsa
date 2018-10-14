@@ -20,6 +20,12 @@ message PlayerCommandMsg {
 
 message PlayerCommandReplyMsg {
 	required RequestIdentifier req_identifier = 1;
+
+	// the status for the request for new song or new position
 	required bool req_status = 2;
 	required string req_status_desc = 3;
+
+	// current status regardless of the request
+	required bool is_song_playing = 4;
+	optional string current_song_path = 5;
 }

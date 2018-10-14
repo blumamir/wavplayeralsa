@@ -2046,10 +2046,18 @@ public final class PlayerCommand {
 
     /**
      * <code>required bool req_status = 2;</code>
+     *
+     * <pre>
+     * the status for the request for new song or new position
+     * </pre>
      */
     boolean hasReqStatus();
     /**
      * <code>required bool req_status = 2;</code>
+     *
+     * <pre>
+     * the status for the request for new song or new position
+     * </pre>
      */
     boolean getReqStatus();
 
@@ -2066,6 +2074,37 @@ public final class PlayerCommand {
      */
     com.google.protobuf.ByteString
         getReqStatusDescBytes();
+
+    /**
+     * <code>required bool is_song_playing = 4;</code>
+     *
+     * <pre>
+     * current status regardless of the request
+     * </pre>
+     */
+    boolean hasIsSongPlaying();
+    /**
+     * <code>required bool is_song_playing = 4;</code>
+     *
+     * <pre>
+     * current status regardless of the request
+     * </pre>
+     */
+    boolean getIsSongPlaying();
+
+    /**
+     * <code>optional string current_song_path = 5;</code>
+     */
+    boolean hasCurrentSongPath();
+    /**
+     * <code>optional string current_song_path = 5;</code>
+     */
+    java.lang.String getCurrentSongPath();
+    /**
+     * <code>optional string current_song_path = 5;</code>
+     */
+    com.google.protobuf.ByteString
+        getCurrentSongPathBytes();
   }
   /**
    * Protobuf type {@code PlayerCommandReplyMsg}
@@ -2143,6 +2182,17 @@ public final class PlayerCommand {
               reqStatusDesc_ = bs;
               break;
             }
+            case 32: {
+              bitField0_ |= 0x00000008;
+              isSongPlaying_ = input.readBool();
+              break;
+            }
+            case 42: {
+              com.google.protobuf.ByteString bs = input.readBytes();
+              bitField0_ |= 0x00000010;
+              currentSongPath_ = bs;
+              break;
+            }
           }
         }
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
@@ -2208,12 +2258,20 @@ public final class PlayerCommand {
     private boolean reqStatus_;
     /**
      * <code>required bool req_status = 2;</code>
+     *
+     * <pre>
+     * the status for the request for new song or new position
+     * </pre>
      */
     public boolean hasReqStatus() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
     /**
      * <code>required bool req_status = 2;</code>
+     *
+     * <pre>
+     * the status for the request for new song or new position
+     * </pre>
      */
     public boolean getReqStatus() {
       return reqStatus_;
@@ -2261,10 +2319,77 @@ public final class PlayerCommand {
       }
     }
 
+    public static final int IS_SONG_PLAYING_FIELD_NUMBER = 4;
+    private boolean isSongPlaying_;
+    /**
+     * <code>required bool is_song_playing = 4;</code>
+     *
+     * <pre>
+     * current status regardless of the request
+     * </pre>
+     */
+    public boolean hasIsSongPlaying() {
+      return ((bitField0_ & 0x00000008) == 0x00000008);
+    }
+    /**
+     * <code>required bool is_song_playing = 4;</code>
+     *
+     * <pre>
+     * current status regardless of the request
+     * </pre>
+     */
+    public boolean getIsSongPlaying() {
+      return isSongPlaying_;
+    }
+
+    public static final int CURRENT_SONG_PATH_FIELD_NUMBER = 5;
+    private java.lang.Object currentSongPath_;
+    /**
+     * <code>optional string current_song_path = 5;</code>
+     */
+    public boolean hasCurrentSongPath() {
+      return ((bitField0_ & 0x00000010) == 0x00000010);
+    }
+    /**
+     * <code>optional string current_song_path = 5;</code>
+     */
+    public java.lang.String getCurrentSongPath() {
+      java.lang.Object ref = currentSongPath_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          currentSongPath_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>optional string current_song_path = 5;</code>
+     */
+    public com.google.protobuf.ByteString
+        getCurrentSongPathBytes() {
+      java.lang.Object ref = currentSongPath_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        currentSongPath_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
     private void initFields() {
       reqIdentifier_ = PlayerCommand.RequestIdentifier.getDefaultInstance();
       reqStatus_ = false;
       reqStatusDesc_ = "";
+      isSongPlaying_ = false;
+      currentSongPath_ = "";
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -2281,6 +2406,10 @@ public final class PlayerCommand {
         return false;
       }
       if (!hasReqStatusDesc()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasIsSongPlaying()) {
         memoizedIsInitialized = 0;
         return false;
       }
@@ -2304,6 +2433,12 @@ public final class PlayerCommand {
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         output.writeBytes(3, getReqStatusDescBytes());
       }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        output.writeBool(4, isSongPlaying_);
+      }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        output.writeBytes(5, getCurrentSongPathBytes());
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -2324,6 +2459,14 @@ public final class PlayerCommand {
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         size += com.google.protobuf.CodedOutputStream
           .computeBytesSize(3, getReqStatusDescBytes());
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(4, isSongPlaying_);
+      }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(5, getCurrentSongPathBytes());
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -2453,6 +2596,10 @@ public final class PlayerCommand {
         bitField0_ = (bitField0_ & ~0x00000002);
         reqStatusDesc_ = "";
         bitField0_ = (bitField0_ & ~0x00000004);
+        isSongPlaying_ = false;
+        bitField0_ = (bitField0_ & ~0x00000008);
+        currentSongPath_ = "";
+        bitField0_ = (bitField0_ & ~0x00000010);
         return this;
       }
 
@@ -2497,6 +2644,14 @@ public final class PlayerCommand {
           to_bitField0_ |= 0x00000004;
         }
         result.reqStatusDesc_ = reqStatusDesc_;
+        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+          to_bitField0_ |= 0x00000008;
+        }
+        result.isSongPlaying_ = isSongPlaying_;
+        if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
+          to_bitField0_ |= 0x00000010;
+        }
+        result.currentSongPath_ = currentSongPath_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -2524,6 +2679,14 @@ public final class PlayerCommand {
           reqStatusDesc_ = other.reqStatusDesc_;
           onChanged();
         }
+        if (other.hasIsSongPlaying()) {
+          setIsSongPlaying(other.getIsSongPlaying());
+        }
+        if (other.hasCurrentSongPath()) {
+          bitField0_ |= 0x00000010;
+          currentSongPath_ = other.currentSongPath_;
+          onChanged();
+        }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
@@ -2538,6 +2701,10 @@ public final class PlayerCommand {
           return false;
         }
         if (!hasReqStatusDesc()) {
+          
+          return false;
+        }
+        if (!hasIsSongPlaying()) {
           
           return false;
         }
@@ -2686,18 +2853,30 @@ public final class PlayerCommand {
       private boolean reqStatus_ ;
       /**
        * <code>required bool req_status = 2;</code>
+       *
+       * <pre>
+       * the status for the request for new song or new position
+       * </pre>
        */
       public boolean hasReqStatus() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
       /**
        * <code>required bool req_status = 2;</code>
+       *
+       * <pre>
+       * the status for the request for new song or new position
+       * </pre>
        */
       public boolean getReqStatus() {
         return reqStatus_;
       }
       /**
        * <code>required bool req_status = 2;</code>
+       *
+       * <pre>
+       * the status for the request for new song or new position
+       * </pre>
        */
       public Builder setReqStatus(boolean value) {
         bitField0_ |= 0x00000002;
@@ -2707,6 +2886,10 @@ public final class PlayerCommand {
       }
       /**
        * <code>required bool req_status = 2;</code>
+       *
+       * <pre>
+       * the status for the request for new song or new position
+       * </pre>
        */
       public Builder clearReqStatus() {
         bitField0_ = (bitField0_ & ~0x00000002);
@@ -2791,6 +2974,130 @@ public final class PlayerCommand {
         return this;
       }
 
+      private boolean isSongPlaying_ ;
+      /**
+       * <code>required bool is_song_playing = 4;</code>
+       *
+       * <pre>
+       * current status regardless of the request
+       * </pre>
+       */
+      public boolean hasIsSongPlaying() {
+        return ((bitField0_ & 0x00000008) == 0x00000008);
+      }
+      /**
+       * <code>required bool is_song_playing = 4;</code>
+       *
+       * <pre>
+       * current status regardless of the request
+       * </pre>
+       */
+      public boolean getIsSongPlaying() {
+        return isSongPlaying_;
+      }
+      /**
+       * <code>required bool is_song_playing = 4;</code>
+       *
+       * <pre>
+       * current status regardless of the request
+       * </pre>
+       */
+      public Builder setIsSongPlaying(boolean value) {
+        bitField0_ |= 0x00000008;
+        isSongPlaying_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required bool is_song_playing = 4;</code>
+       *
+       * <pre>
+       * current status regardless of the request
+       * </pre>
+       */
+      public Builder clearIsSongPlaying() {
+        bitField0_ = (bitField0_ & ~0x00000008);
+        isSongPlaying_ = false;
+        onChanged();
+        return this;
+      }
+
+      private java.lang.Object currentSongPath_ = "";
+      /**
+       * <code>optional string current_song_path = 5;</code>
+       */
+      public boolean hasCurrentSongPath() {
+        return ((bitField0_ & 0x00000010) == 0x00000010);
+      }
+      /**
+       * <code>optional string current_song_path = 5;</code>
+       */
+      public java.lang.String getCurrentSongPath() {
+        java.lang.Object ref = currentSongPath_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            currentSongPath_ = s;
+          }
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>optional string current_song_path = 5;</code>
+       */
+      public com.google.protobuf.ByteString
+          getCurrentSongPathBytes() {
+        java.lang.Object ref = currentSongPath_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          currentSongPath_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>optional string current_song_path = 5;</code>
+       */
+      public Builder setCurrentSongPath(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000010;
+        currentSongPath_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string current_song_path = 5;</code>
+       */
+      public Builder clearCurrentSongPath() {
+        bitField0_ = (bitField0_ & ~0x00000010);
+        currentSongPath_ = getDefaultInstance().getCurrentSongPath();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string current_song_path = 5;</code>
+       */
+      public Builder setCurrentSongPathBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000010;
+        currentSongPath_ = value;
+        onChanged();
+        return this;
+      }
+
       // @@protoc_insertion_point(builder_scope:PlayerCommandReplyMsg)
     }
 
@@ -2838,10 +3145,12 @@ public final class PlayerCommand {
       "stIdentifier\022\021\n\tstop_play\030\002 \001(\010\022:\n\020new_s" +
       "ong_request\030\003 \001(\0132 .PlayerCommandMsg.New" +
       "SongRequest\032>\n\016NewSongRequest\022\021\n\tsong_na" +
-      "me\030\001 \002(\t\022\031\n\016position_in_ms\030\002 \001(\r:\0010\"p\n\025P" +
-      "layerCommandReplyMsg\022*\n\016req_identifier\030\001" +
-      " \002(\0132\022.RequestIdentifier\022\022\n\nreq_status\030\002",
-      " \002(\010\022\027\n\017req_status_desc\030\003 \002(\t"
+      "me\030\001 \002(\t\022\031\n\016position_in_ms\030\002 \001(\r:\0010\"\244\001\n\025" +
+      "PlayerCommandReplyMsg\022*\n\016req_identifier\030" +
+      "\001 \002(\0132\022.RequestIdentifier\022\022\n\nreq_status\030",
+      "\002 \002(\010\022\027\n\017req_status_desc\030\003 \002(\t\022\027\n\017is_son" +
+      "g_playing\030\004 \002(\010\022\031\n\021current_song_path\030\005 \001" +
+      "(\t"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -2878,7 +3187,7 @@ public final class PlayerCommand {
     internal_static_PlayerCommandReplyMsg_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_PlayerCommandReplyMsg_descriptor,
-        new java.lang.String[] { "ReqIdentifier", "ReqStatus", "ReqStatusDesc", });
+        new java.lang.String[] { "ReqIdentifier", "ReqStatus", "ReqStatusDesc", "IsSongPlaying", "CurrentSongPath", });
   }
 
   // @@protoc_insertion_point(outer_class_scope)

@@ -4,41 +4,85 @@
 #include "generated/player_command.pb.h"
 #include <iostream>
 #include <sndfile.h>
-
+#include <cxxopts.hpp>
 #include <zmq.hpp>
+
 #include <string>
 #include <iostream>
 #include <sstream>
 #include <unistd.h>
+#include <linux/limits.h>
 
 
 int main(int argc, char *argv[]) {
 
-	if (argc <= 1) {
-		std::cout << "Usage: " << argv[0] << " file.wav" << std::endl;
+	// current directory
+	char cwdCharArr[PATH_MAX];
+	getcwd(cwdCharArr, sizeof(cwdCharArr));
+
+	wavplayeralsa::PositionReporter pr;
+	wavplayeralsa::SingleFilePlayer *player = NULL;
+
+
+	cxxopts::Options options("wavplayeralsa", "wav files player with accurate position in audio tracking.");
+	options.add_options()
+		("f,initial_file", "file which will be played on run", cxxopts::value<std::string>())
+		("d,wav_dir", "the directory in which wav files are located", cxxopts::value<std::string>()->default_value(cwdCharArr))
+		("position_report_port", "port on which live position messages are published over broadcast", cxxopts::value<uint16_t>()->default_value("2001"))
+		("position_report_rate", "the rate for position report messages in ms", cxxopts::value<uint32_t>()->default_value("5"))
+		("cmd_ifc_port", "port to listen for player commands over network", cxxopts::value<uint16_t>()->default_value("2100"))
+		("h, help", "print help")
+		;
+
+	int rcvtimeo = 5;
+	uint16_t cmdIfcPort = 2100;
+	std::string wavDir;
+
+	try {
+
+		 auto optsresult = options.parse(argc, argv);
+
+		 if(optsresult.count("help")) {
+		 	std::cout << options.help({""}) << std::endl;
+		 	return 0;
+		 }
+
+		 // position reporter stuff
+		 pr.initialize(optsresult["position_report_port"].as<uint16_t>());
+
+		 // player stuff
+		 wavDir = optsresult["wav_dir"].as<std::string>();
+		 if(optsresult.count("initial_file")) {
+		 	player = new wavplayeralsa::SingleFilePlayer();
+		 	player->initialize(wavDir, optsresult["initial_file"].as<std::string>());
+		 }
+
+		 // commands
+		 rcvtimeo = optsresult["position_report_rate"].as<uint32_t>();
+		 cmdIfcPort = optsresult["cmd_ifc_port"].as<uint16_t>();
+
+	}
+	catch(const cxxopts::OptionException &e) {
+		std::cout << "Invalid command line options: '" << e.what() << "'" << std::endl;
+		return -1;
+	}
+	catch(const std::runtime_error &e) {
+		std::cout << "general error: '" << e.what() << "'" << std::endl;
 		return -1;
 	}
 
 	zmq::context_t context(1);
 	zmq::socket_t socket(context, ZMQ_REP);
-	int rcvtimeo = 5;
 	socket.setsockopt(ZMQ_RCVTIMEO, &rcvtimeo, sizeof(int));
-	socket.bind("tcp://*:5555");
 
-	const char *filename = argv[1];
+	std::stringstream bindStr;
+	bindStr << "tcp://*:" << cmdIfcPort;
+	socket.bind(bindStr.str().c_str());
 
-	wavplayeralsa::SingleFilePlayer *player = new wavplayeralsa::SingleFilePlayer();
-	player->setFileToPlay(filename);
-	try {
-		player->initialize();		
+	if(player != NULL) {
+		player->startPlay(0);
 	}
-	catch(const std::runtime_error &e) {
-		std::cerr << e.what() << std::endl;
-		std::cerr << "goodbey" << std::endl;
-		return -1;
-	}
-	player->startPlay(0);
-	wavplayeralsa::PositionReporter pr;
+
 	while(true) {
 
 		zmq::message_t request;
@@ -96,9 +140,8 @@ int main(int argc, char *argv[]) {
 					}
 
 					player = new wavplayeralsa::SingleFilePlayer();
-					player->setFileToPlay(newSongReq.song_name());
 					try {
-						player->initialize();		
+						player->initialize(wavDir, newSongReq.song_name());		
 						reqStatusDesc << "song successfully changed to '" << newSongToPlay << "'. " <<
 								"new song will start playing at position " << newPositionMs << " ms";
 						reqStatus = true;
@@ -121,6 +164,10 @@ int main(int argc, char *argv[]) {
 			replyProtoMsg.mutable_req_identifier()->CopyFrom(reqMsg.req_identifier());
 			replyProtoMsg.set_req_status(reqStatus);
 			replyProtoMsg.set_req_status_desc(reqStatusDesc.str());
+			replyProtoMsg.set_is_song_playing(player != NULL ? player->isPlaying() : false);
+			if(player != NULL) {
+				replyProtoMsg.set_current_song_path(player->getFileToPlay());
+			}
 
 			std::string replayProtoSerialized;
 			replyProtoMsg.SerializeToString(&replayProtoSerialized);
@@ -130,8 +177,6 @@ int main(int argc, char *argv[]) {
 
 			std::cout << "sent reply: " << std::endl << replyProtoMsg.DebugString();
 		}
-
-		//std::this_thread::sleep_for(std::chrono::milliseconds(5));
 	}
 
 	return 0;

@@ -18,7 +18,7 @@ _sym_db = _symbol_database.Default()
 DESCRIPTOR = _descriptor.FileDescriptor(
   name='player_command.proto',
   package='',
-  serialized_pb=_b('\n\x14player_command.proto\"S\n\x11RequestIdentifier\x12\x0e\n\x06\x63ookie\x18\x01 \x02(\x04\x12\x16\n\x0erequestor_guid\x18\x02 \x02(\x04\x12\x16\n\x0erequestor_name\x18\x03 \x02(\t\"\xcd\x01\n\x10PlayerCommandMsg\x12*\n\x0ereq_identifier\x18\x01 \x02(\x0b\x32\x12.RequestIdentifier\x12\x11\n\tstop_play\x18\x02 \x01(\x08\x12:\n\x10new_song_request\x18\x03 \x01(\x0b\x32 .PlayerCommandMsg.NewSongRequest\x1a>\n\x0eNewSongRequest\x12\x11\n\tsong_name\x18\x01 \x02(\t\x12\x19\n\x0eposition_in_ms\x18\x02 \x01(\r:\x01\x30\"p\n\x15PlayerCommandReplyMsg\x12*\n\x0ereq_identifier\x18\x01 \x02(\x0b\x32\x12.RequestIdentifier\x12\x12\n\nreq_status\x18\x02 \x02(\x08\x12\x17\n\x0freq_status_desc\x18\x03 \x02(\t')
+  serialized_pb=_b('\n\x14player_command.proto\"S\n\x11RequestIdentifier\x12\x0e\n\x06\x63ookie\x18\x01 \x02(\x04\x12\x16\n\x0erequestor_guid\x18\x02 \x02(\x04\x12\x16\n\x0erequestor_name\x18\x03 \x02(\t\"\xcd\x01\n\x10PlayerCommandMsg\x12*\n\x0ereq_identifier\x18\x01 \x02(\x0b\x32\x12.RequestIdentifier\x12\x11\n\tstop_play\x18\x02 \x01(\x08\x12:\n\x10new_song_request\x18\x03 \x01(\x0b\x32 .PlayerCommandMsg.NewSongRequest\x1a>\n\x0eNewSongRequest\x12\x11\n\tsong_name\x18\x01 \x02(\t\x12\x19\n\x0eposition_in_ms\x18\x02 \x01(\r:\x01\x30\"\xa4\x01\n\x15PlayerCommandReplyMsg\x12*\n\x0ereq_identifier\x18\x01 \x02(\x0b\x32\x12.RequestIdentifier\x12\x12\n\nreq_status\x18\x02 \x02(\x08\x12\x17\n\x0freq_status_desc\x18\x03 \x02(\t\x12\x17\n\x0fis_song_playing\x18\x04 \x02(\x08\x12\x19\n\x11\x63urrent_song_path\x18\x05 \x01(\t')
 )
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
@@ -177,6 +177,20 @@ _PLAYERCOMMANDREPLYMSG = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
+    _descriptor.FieldDescriptor(
+      name='is_song_playing', full_name='PlayerCommandReplyMsg.is_song_playing', index=3,
+      number=4, type=8, cpp_type=7, label=2,
+      has_default_value=False, default_value=False,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='current_song_path', full_name='PlayerCommandReplyMsg.current_song_path', index=4,
+      number=5, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
   ],
   extensions=[
   ],
@@ -188,8 +202,8 @@ _PLAYERCOMMANDREPLYMSG = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=317,
-  serialized_end=429,
+  serialized_start=318,
+  serialized_end=482,
 )
 
 _PLAYERCOMMANDMSG_NEWSONGREQUEST.containing_type = _PLAYERCOMMANDMSG

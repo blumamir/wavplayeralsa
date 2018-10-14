@@ -26,9 +26,8 @@ namespace wavplayeralsa {
 
 		~SingleFilePlayer();
 
-		void setFileToPlay(const std::string &fullFileName);
 		const std::string &getFileToPlay();
-		void initialize();
+		void initialize(const std::string &path, const std::string &fileName);
 		void startPlay(unsigned int positionInMs);
 		void stop();
 		unsigned int getPositionInMs();
@@ -44,6 +43,7 @@ namespace wavplayeralsa {
 	private:
 
 		std::string m_fileToPlay;
+		std::string m_fullFileName;
 
 	private:
 	    enum SampleType {

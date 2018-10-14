@@ -4,6 +4,7 @@
 #include <alsa/asoundlib.h>
 #include <iostream>
 #include <sstream>
+#include <stdlib.h>
 
 namespace wavplayeralsa {
 
@@ -20,10 +21,6 @@ namespace wavplayeralsa {
 		}
 	}
 
-	void SingleFilePlayer::setFileToPlay(const std::string &fullFileName) {
-		m_fileToPlay = fullFileName;
-	}
-
 	const std::string &SingleFilePlayer::getFileToPlay() { 
 		return m_fileToPlay; 
 	}
@@ -36,6 +33,8 @@ namespace wavplayeralsa {
 
 			m_playStatusMutex.lock();
 			if(m_playStatus != Playing) {
+
+				// clear the content of the buffer
 				int err;
 				std::stringstream errDesc;
 				if( (err = snd_pcm_drop(m_alsaPlaybackHandle)) < 0 ) {
@@ -54,6 +53,7 @@ namespace wavplayeralsa {
 				break;
 			}
 
+			// calculate how many frames to write
 			snd_pcm_sframes_t framesToDeliver;
 			if( (framesToDeliver = snd_pcm_avail_update(m_alsaPlaybackHandle)) < 0) {
 				if(framesToDeliver == -EPIPE) {
@@ -65,9 +65,9 @@ namespace wavplayeralsa {
 					break;
 				}
 			}
-
 			framesToDeliver = framesToDeliver > 4096 ? 4096 : framesToDeliver;
 
+			// check that we do not exceed the frames that we acctually have
 			int remainingFrames = m_totalFrames - m_currPositionInFrames;
 			if(remainingFrames <= 0) {
 				std::cout << "done writing frames to pcm" << std::endl;
@@ -77,6 +77,7 @@ namespace wavplayeralsa {
 				framesToDeliver = remainingFrames;
 			}
 
+			// write the frames to the buffer and update m_currPositionInFrames variable
 			m_currPositionMutex.lock();
 			{
 				unsigned int offset = m_currPositionInFrames * m_channels * m_sampleChannelSizeBytes;
@@ -89,8 +90,6 @@ namespace wavplayeralsa {
 			m_currPositionMutex.unlock();
 
 		}
-
-		std::cout << "done playing current wav file" << std::endl;
 
 	}
 
@@ -120,7 +119,8 @@ namespace wavplayeralsa {
 	}
 
 	bool SingleFilePlayer::isPlaying() {
-		return snd_pcm_state(m_alsaPlaybackHandle) == SND_PCM_STATE_RUNNING;
+		int status = snd_pcm_state(m_alsaPlaybackHandle);
+		return (status == SND_PCM_STATE_RUNNING) || (status == SND_PCM_STATE_PREPARED);
 	}
 
 	void SingleFilePlayer::startPlay(unsigned int positionInMs) {
@@ -158,16 +158,27 @@ namespace wavplayeralsa {
 		m_playingThread = nullptr;
 	}
 
-	void SingleFilePlayer::initialize() {
+	void SingleFilePlayer::initialize(const std::string &path, const std::string &fileName) {
+		std::stringstream fileDirStream;
+
+		std::string wavPath = path;
+		char * absPathCharArr = realpath(path.c_str(), NULL);
+		if(absPathCharArr != NULL) {
+			wavPath = absPathCharArr;
+			free(absPathCharArr);
+		}
+		fileDirStream << wavPath << "/" << fileName;
+		m_fileToPlay = fileName;
+		m_fullFileName = fileDirStream.str();
 		initSndFile();	
 		initAlsa();	
 	}
 
 	void SingleFilePlayer::initSndFile() {
-		SndfileHandle sndFile = SndfileHandle(m_fileToPlay);
+		SndfileHandle sndFile = SndfileHandle(m_fullFileName);
 		if(sndFile.error() != 0) {
 			std::stringstream errorDesc;
-			errorDesc << "The file '" << m_fileToPlay << "' cannot be opened. error msg: '" << sndFile.strError() << "'";
+			errorDesc << "The file '" << m_fullFileName << "' cannot be opened. error msg: '" << sndFile.strError() << "'";
 			throw std::runtime_error(errorDesc.str());
 		}
 

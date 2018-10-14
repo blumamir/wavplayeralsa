@@ -91,10 +91,12 @@ void protobuf_AssignDesc_player_5fcommand_2eproto() {
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(PlayerCommandMsg_NewSongRequest));
   PlayerCommandReplyMsg_descriptor_ = file->message_type(2);
-  static const int PlayerCommandReplyMsg_offsets_[3] = {
+  static const int PlayerCommandReplyMsg_offsets_[5] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(PlayerCommandReplyMsg, req_identifier_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(PlayerCommandReplyMsg, req_status_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(PlayerCommandReplyMsg, req_status_desc_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(PlayerCommandReplyMsg, is_song_playing_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(PlayerCommandReplyMsg, current_song_path_),
   };
   PlayerCommandReplyMsg_reflection_ =
     new ::google::protobuf::internal::GeneratedMessageReflection(
@@ -156,10 +158,12 @@ void protobuf_AddDesc_player_5fcommand_2eproto() {
     "stIdentifier\022\021\n\tstop_play\030\002 \001(\010\022:\n\020new_s"
     "ong_request\030\003 \001(\0132 .PlayerCommandMsg.New"
     "SongRequest\032>\n\016NewSongRequest\022\021\n\tsong_na"
-    "me\030\001 \002(\t\022\031\n\016position_in_ms\030\002 \001(\r:\0010\"p\n\025P"
-    "layerCommandReplyMsg\022*\n\016req_identifier\030\001"
-    " \002(\0132\022.RequestIdentifier\022\022\n\nreq_status\030\002"
-    " \002(\010\022\027\n\017req_status_desc\030\003 \002(\t", 429);
+    "me\030\001 \002(\t\022\031\n\016position_in_ms\030\002 \001(\r:\0010\"\244\001\n\025"
+    "PlayerCommandReplyMsg\022*\n\016req_identifier\030"
+    "\001 \002(\0132\022.RequestIdentifier\022\022\n\nreq_status\030"
+    "\002 \002(\010\022\027\n\017req_status_desc\030\003 \002(\t\022\027\n\017is_son"
+    "g_playing\030\004 \002(\010\022\031\n\021current_song_path\030\005 \001"
+    "(\t", 482);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "player_command.proto", &protobuf_RegisterTypes);
   RequestIdentifier::default_instance_ = new RequestIdentifier();
@@ -1125,6 +1129,8 @@ void PlayerCommandMsg::Swap(PlayerCommandMsg* other) {
 const int PlayerCommandReplyMsg::kReqIdentifierFieldNumber;
 const int PlayerCommandReplyMsg::kReqStatusFieldNumber;
 const int PlayerCommandReplyMsg::kReqStatusDescFieldNumber;
+const int PlayerCommandReplyMsg::kIsSongPlayingFieldNumber;
+const int PlayerCommandReplyMsg::kCurrentSongPathFieldNumber;
 #endif  // !_MSC_VER
 
 PlayerCommandReplyMsg::PlayerCommandReplyMsg()
@@ -1150,6 +1156,8 @@ void PlayerCommandReplyMsg::SharedCtor() {
   req_identifier_ = NULL;
   req_status_ = false;
   req_status_desc_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  is_song_playing_ = false;
+  current_song_path_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
 }
 
@@ -1161,6 +1169,9 @@ PlayerCommandReplyMsg::~PlayerCommandReplyMsg() {
 void PlayerCommandReplyMsg::SharedDtor() {
   if (req_status_desc_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
     delete req_status_desc_;
+  }
+  if (current_song_path_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    delete current_song_path_;
   }
   if (this != default_instance_) {
     delete req_identifier_;
@@ -1189,17 +1200,36 @@ PlayerCommandReplyMsg* PlayerCommandReplyMsg::New() const {
 }
 
 void PlayerCommandReplyMsg::Clear() {
-  if (_has_bits_[0 / 32] & 7) {
+#define OFFSET_OF_FIELD_(f) (reinterpret_cast<char*>(      \
+  &reinterpret_cast<PlayerCommandReplyMsg*>(16)->f) - \
+   reinterpret_cast<char*>(16))
+
+#define ZR_(first, last) do {                              \
+    size_t f = OFFSET_OF_FIELD_(first);                    \
+    size_t n = OFFSET_OF_FIELD_(last) - f + sizeof(last);  \
+    ::memset(&first, 0, n);                                \
+  } while (0)
+
+  if (_has_bits_[0 / 32] & 31) {
+    ZR_(req_status_, is_song_playing_);
     if (has_req_identifier()) {
       if (req_identifier_ != NULL) req_identifier_->::RequestIdentifier::Clear();
     }
-    req_status_ = false;
     if (has_req_status_desc()) {
       if (req_status_desc_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
         req_status_desc_->clear();
       }
     }
+    if (has_current_song_path()) {
+      if (current_song_path_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+        current_song_path_->clear();
+      }
+    }
   }
+
+#undef OFFSET_OF_FIELD_
+#undef ZR_
+
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
   mutable_unknown_fields()->Clear();
 }
@@ -1254,6 +1284,38 @@ bool PlayerCommandReplyMsg::MergePartialFromCodedStream(
         } else {
           goto handle_unusual;
         }
+        if (input->ExpectTag(32)) goto parse_is_song_playing;
+        break;
+      }
+
+      // required bool is_song_playing = 4;
+      case 4: {
+        if (tag == 32) {
+         parse_is_song_playing:
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   bool, ::google::protobuf::internal::WireFormatLite::TYPE_BOOL>(
+                 input, &is_song_playing_)));
+          set_has_is_song_playing();
+        } else {
+          goto handle_unusual;
+        }
+        if (input->ExpectTag(42)) goto parse_current_song_path;
+        break;
+      }
+
+      // optional string current_song_path = 5;
+      case 5: {
+        if (tag == 42) {
+         parse_current_song_path:
+          DO_(::google::protobuf::internal::WireFormatLite::ReadString(
+                input, this->mutable_current_song_path()));
+          ::google::protobuf::internal::WireFormat::VerifyUTF8StringNamedField(
+            this->current_song_path().data(), this->current_song_path().length(),
+            ::google::protobuf::internal::WireFormat::PARSE,
+            "current_song_path");
+        } else {
+          goto handle_unusual;
+        }
         if (input->ExpectAtEnd()) goto success;
         break;
       }
@@ -1304,6 +1366,21 @@ void PlayerCommandReplyMsg::SerializeWithCachedSizes(
       3, this->req_status_desc(), output);
   }
 
+  // required bool is_song_playing = 4;
+  if (has_is_song_playing()) {
+    ::google::protobuf::internal::WireFormatLite::WriteBool(4, this->is_song_playing(), output);
+  }
+
+  // optional string current_song_path = 5;
+  if (has_current_song_path()) {
+    ::google::protobuf::internal::WireFormat::VerifyUTF8StringNamedField(
+      this->current_song_path().data(), this->current_song_path().length(),
+      ::google::protobuf::internal::WireFormat::SERIALIZE,
+      "current_song_path");
+    ::google::protobuf::internal::WireFormatLite::WriteStringMaybeAliased(
+      5, this->current_song_path(), output);
+  }
+
   if (!unknown_fields().empty()) {
     ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
         unknown_fields(), output);
@@ -1337,6 +1414,22 @@ void PlayerCommandReplyMsg::SerializeWithCachedSizes(
         3, this->req_status_desc(), target);
   }
 
+  // required bool is_song_playing = 4;
+  if (has_is_song_playing()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteBoolToArray(4, this->is_song_playing(), target);
+  }
+
+  // optional string current_song_path = 5;
+  if (has_current_song_path()) {
+    ::google::protobuf::internal::WireFormat::VerifyUTF8StringNamedField(
+      this->current_song_path().data(), this->current_song_path().length(),
+      ::google::protobuf::internal::WireFormat::SERIALIZE,
+      "current_song_path");
+    target =
+      ::google::protobuf::internal::WireFormatLite::WriteStringToArray(
+        5, this->current_song_path(), target);
+  }
+
   if (!unknown_fields().empty()) {
     target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
         unknown_fields(), target);
@@ -1366,6 +1459,18 @@ int PlayerCommandReplyMsg::ByteSize() const {
       total_size += 1 +
         ::google::protobuf::internal::WireFormatLite::StringSize(
           this->req_status_desc());
+    }
+
+    // required bool is_song_playing = 4;
+    if (has_is_song_playing()) {
+      total_size += 1 + 1;
+    }
+
+    // optional string current_song_path = 5;
+    if (has_current_song_path()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::StringSize(
+          this->current_song_path());
     }
 
   }
@@ -1404,6 +1509,12 @@ void PlayerCommandReplyMsg::MergeFrom(const PlayerCommandReplyMsg& from) {
     if (from.has_req_status_desc()) {
       set_req_status_desc(from.req_status_desc());
     }
+    if (from.has_is_song_playing()) {
+      set_is_song_playing(from.is_song_playing());
+    }
+    if (from.has_current_song_path()) {
+      set_current_song_path(from.current_song_path());
+    }
   }
   mutable_unknown_fields()->MergeFrom(from.unknown_fields());
 }
@@ -1421,7 +1532,7 @@ void PlayerCommandReplyMsg::CopyFrom(const PlayerCommandReplyMsg& from) {
 }
 
 bool PlayerCommandReplyMsg::IsInitialized() const {
-  if ((_has_bits_[0] & 0x00000007) != 0x00000007) return false;
+  if ((_has_bits_[0] & 0x0000000f) != 0x0000000f) return false;
 
   if (has_req_identifier()) {
     if (!this->req_identifier().IsInitialized()) return false;
@@ -1434,6 +1545,8 @@ void PlayerCommandReplyMsg::Swap(PlayerCommandReplyMsg* other) {
     std::swap(req_identifier_, other->req_identifier_);
     std::swap(req_status_, other->req_status_);
     std::swap(req_status_desc_, other->req_status_desc_);
+    std::swap(is_song_playing_, other->is_song_playing_);
+    std::swap(current_song_path_, other->current_song_path_);
     std::swap(_has_bits_[0], other->_has_bits_[0]);
     _unknown_fields_.Swap(&other->_unknown_fields_);
     std::swap(_cached_size_, other->_cached_size_);
