@@ -11,7 +11,6 @@
 
 
 #define HELLO_PORT 2001
-#define HELLO_GROUP "10.0.0.255"
 
 #include <iostream>
 
@@ -35,7 +34,7 @@ namespace wavplayeralsa {
 /* set up destination address */
 		// memset(&addr,0,sizeof(addr));
 		addr.sin_family=AF_INET;
-		addr.sin_addr.s_addr=inet_addr(HELLO_GROUP);
+		addr.sin_addr.s_addr=htonl(INADDR_BROADCAST);
 		addr.sin_port=htons(HELLO_PORT);
 
 		/*localInterface.s_addr = inet_addr("10.0.0.103");
