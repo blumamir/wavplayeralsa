@@ -2,23 +2,16 @@
 ## Installation process (tested on Raspbian and Ubuntu)
 0. Install Raspbian https://www.raspberrypi.org/documentation/installation/installing-images/
 1. Install protobuf 2.6.1
-
+'''
   wget https://github.com/protocolbuffers/protobuf/releases/download/v2.6.1/protobuf-2.6.1.tar.gz
-  
   tar -xvzf protobuf-2.6.1.tar.gz
-  
-   cd protobuf-2.6.1/
-   
-   ./configure
-   
-   make
-   
-   make check
-   
-   sudo make install
-   
-   sudo ldconfig
-   
+  cd protobuf-2.6.1/
+  ./configure
+  make
+  make check
+  sudo make install
+  sudo ldconfig
+'''   
 2. Install zmq
   sudo apt-get install libzmq3-dev
   
