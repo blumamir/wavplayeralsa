@@ -30,3 +30,28 @@
   cmake .
   make
 6. Create a configuration file for the player
+
+## Player description
+1. The player is a wav files audio player intended for accurate position tracking. 
+2. Control over the player is done over a Zero MQ socket, selecting the currently playing file and starting position. 
+3. The player publishes the currently playing file list and accurate current position in milliseconds over UDP broadcast (to minimize network latency)
+
+## Usage
+The executable supports a few commandline arguments, for a list of available options use ./wavplayeralsa -h
+To play a specific file use ./wavplayeralsa -f <filename>.wav
+
+## Control interface
+To control and query the player state a Zero MQ socket can be opened to port 2100 (default), the port can be changed using the commandline parameter --cmd_ifc_port <port>
+  
+The socket should be of type REQ/REP
+The message content is described in the file player_command.proto, command to the player should be of type PlayerCommandMsg, afterwards the player will always respond with a PlayerCommandReplyMsg
+If a command is not specified the reply message still contains the current song name and an indication if a song is playing (can be useful for polling the player)
+
+## Position report interface
+The player will publish a message containing the current song and current position within the song every 5 ms (default), the publishing rate can be changed using the --position_report_rate <rate in ms> commandline parameter
+  
+The message is broadcasted over the local interface on port 2001 (default), port can be changed using the --position_report_port <port> commandline parameter
+  
+The content of the message is a protobuf message specified in the position_report.proto file
+
+The player currently only support file lists of size 0 (no song is playing) or 1 (currently playing song)
