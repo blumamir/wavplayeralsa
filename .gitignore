@@ -38,3 +38,8 @@ Debug/*
 
 # Test Resources
 *.wav
+
+# python files
+*.pyc
+*/.idea/*
+python-tools/venv/*

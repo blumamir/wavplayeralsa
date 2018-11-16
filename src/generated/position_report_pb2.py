@@ -18,7 +18,7 @@ _sym_db = _symbol_database.Default()
 DESCRIPTOR = _descriptor.FileDescriptor(
   name='position_report.proto',
   package='',
-  serialized_pb=_b('\n\x15position_report.proto\"~\n\x11PositionReportMsg\x12&\n\x05songs\x18\x01 \x03(\x0b\x32\x17.PositionReportMsg.Song\x1a\x41\n\x04Song\x12\x11\n\tsong_name\x18\x01 \x02(\t\x12\x16\n\x0eposition_in_ms\x18\x02 \x02(\r\x12\x0e\n\x06volume\x18\x03 \x02(\x01')
+  serialized_pb=_b('\n\x15position_report.proto\"\xa5\x01\n\x11PositionReportMsg\x12&\n\x05songs\x18\x01 \x03(\x0b\x32\x17.PositionReportMsg.Song\x1ah\n\x04Song\x12\x11\n\tsong_name\x18\x01 \x02(\t\x12\x16\n\x0eposition_in_ms\x18\x02 \x02(\r\x12\x0e\n\x06volume\x18\x03 \x02(\x01\x12\x17\n\x0fposition_cookie\x18\x04 \x02(\r\x12\x0c\n\x04guid\x18\x05 \x02(\r')
 )
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
@@ -53,6 +53,20 @@ _POSITIONREPORTMSG_SONG = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
+    _descriptor.FieldDescriptor(
+      name='position_cookie', full_name='PositionReportMsg.Song.position_cookie', index=3,
+      number=4, type=13, cpp_type=3, label=2,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='guid', full_name='PositionReportMsg.Song.guid', index=4,
+      number=5, type=13, cpp_type=3, label=2,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
   ],
   extensions=[
   ],
@@ -64,8 +78,8 @@ _POSITIONREPORTMSG_SONG = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=86,
-  serialized_end=151,
+  serialized_start=87,
+  serialized_end=191,
 )
 
 _POSITIONREPORTMSG = _descriptor.Descriptor(
@@ -93,8 +107,8 @@ _POSITIONREPORTMSG = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=25,
-  serialized_end=151,
+  serialized_start=26,
+  serialized_end=191,
 )
 
 _POSITIONREPORTMSG_SONG.containing_type = _POSITIONREPORTMSG

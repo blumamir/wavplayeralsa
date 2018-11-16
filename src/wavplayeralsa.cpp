@@ -83,15 +83,17 @@ int main(int argc, char *argv[]) {
 		player->startPlay(0);
 	}
 
+	uint32_t positionCookie = 1;
 	while(true) {
 
+		// TODO: this code was just for POC. need to arrange it and make it preety
 		zmq::message_t request;
 		bool gotMsg = socket.recv(&request);
 		if(!gotMsg) {
 			if(player != NULL) {
 				if(player->isPlaying()) {
 					unsigned int positionMs = player->getPositionInMs();
-					pr.sendNewPosition(player->getFileToPlay(), positionMs);			
+					pr.sendNewPosition(player->getFileToPlay(), positionMs, positionCookie);
 				}
 				else {
 					pr.sendNoTracksPlaying();								
@@ -100,64 +102,79 @@ int main(int argc, char *argv[]) {
 		}
 		else {
 
-			PlayerCommandMsg reqMsg;
-			std::string msgStr(static_cast<char*>(request.data()), request.size());
-			reqMsg.ParseFromString(msgStr);
-			std::cout << "Got player request message " << std::endl << reqMsg.DebugString() << std::endl;
-
 			bool reqStatus = true;
 			std::stringstream reqStatusDesc;
-			if(reqMsg.has_stop_play()) {
-				if(player != NULL) {
-					player->stop();
-					reqStatusDesc << "current song '" << player->getFileToPlay() << "' stopped playing";
-					reqStatus = true;
+
+			PlayerCommandMsg reqMsg;
+			std::string msgStr(static_cast<char*>(request.data()), request.size());
+			bool success = reqMsg.ParseFromString(msgStr);
+			if(!success) {
+				reqStatus = false;
+				reqStatusDesc << "Failed to parse protobuf message";
+			}
+			else {
+
+				std::cout << "Got player request message " << std::endl << reqMsg.DebugString() << std::endl;
+
+				if(reqMsg.has_stop_play()) {
+					if(player != NULL) {
+						player->stop();
+						reqStatusDesc << "current song '" << player->getFileToPlay() << "' stopped playing";
+						reqStatus = true;
+					}
+					else {
+						reqStatusDesc << "asked to stop song, but there is no song loaded in the player";
+						reqStatus = true;
+					}
 				}
-				else {
-					reqStatusDesc << "asked to stop song, but there is no song loaded in the player";
-					reqStatus = true;
+
+				else if(reqMsg.has_new_song_request()) {
+
+					const PlayerCommandMsg::NewSongRequest &newSongReq = reqMsg.new_song_request();
+					const std::string newSongToPlay = newSongReq.song_name();
+					const unsigned int newPositionMs = newSongReq.position_in_ms(); // will default to 0 if not set
+
+					if(player != NULL && newSongToPlay == player->getFileToPlay()) {
+						reqStatusDesc << "changing the position of the current song '" << player->getFileToPlay() << "'. new position in ms is: " << newPositionMs << std::endl;
+						reqStatus = true;
+					}
+					else {
+						// so the request asks to change the song.
+						// we will first delete the previous song, then try to load the new one.
+						// in case we fail, we will be left with no song at all which is fine
+
+						if(player != NULL) {
+							player->stop();
+							delete player;
+						}
+
+						player = new wavplayeralsa::SingleFilePlayer();
+						try {
+							player->initialize(wavDir, newSongReq.song_name());		
+							reqStatusDesc << "song successfully changed to '" << newSongToPlay << "'. " <<
+									"new song will start playing at position " << newPositionMs << " ms";
+							reqStatus = true;
+						}
+						catch(const std::runtime_error &e) {
+							delete player;
+							player = NULL;
+							reqStatusDesc << "loading new song '" << newSongToPlay << "' failed. currently no song is loaded in the player and it is not playing. " <<
+								"reason for failure: '" << e.what() << "'";
+							reqStatus = false;
+						}
+					}
+
+					if(player != NULL) {
+						player->startPlay(newSongReq.position_in_ms());
+					}
+
 				}
 			}
 
-			else if(reqMsg.has_new_song_request()) {
-
-				const PlayerCommandMsg::NewSongRequest &newSongReq = reqMsg.new_song_request();
-				const std::string newSongToPlay = newSongReq.song_name();
-				const unsigned int newPositionMs = newSongReq.position_in_ms(); // will default to 0 if not set
-
-				if(player != NULL && newSongToPlay == player->getFileToPlay()) {
-					reqStatusDesc << "changing the position of the current song '" << player->getFileToPlay() << "'. new position in ms is: " << newPositionMs << std::endl;
-					reqStatus = true;
-				}
-				else {
-					// so the request asks to change the song.
-					// we will first delete the previous song, then try to load the new one.
-					// in case we fail, we will be left with no song at all which is fine
-
-					if(player != NULL) {
-						player->stop();
-						delete player;
-					}
-
-					player = new wavplayeralsa::SingleFilePlayer();
-					try {
-						player->initialize(wavDir, newSongReq.song_name());		
-						reqStatusDesc << "song successfully changed to '" << newSongToPlay << "'. " <<
-								"new song will start playing at position " << newPositionMs << " ms";
-						reqStatus = true;
-					}
-					catch(const std::runtime_error &e) {
-						delete player;
-						player = NULL;
-						reqStatusDesc << "loading new song '" << newSongToPlay << "' failed. currently no song is loaded in the player and it is not playing. " <<
-							"reason for failure: '" << e.what() << "'";
-						reqStatus = false;
-					}
-				}
-
-				if(player != NULL) {
-					player->startPlay(newSongReq.position_in_ms());
-				}
+			// so we handled a new request which was successfull, we increase the position cookie to signal that the position has changed externally
+			if(reqStatus == true) {
+				positionCookie++;
+				std::cout << "new position cookie is: " << positionCookie << std::endl;
 			}
 
 			PlayerCommandReplyMsg replyProtoMsg;

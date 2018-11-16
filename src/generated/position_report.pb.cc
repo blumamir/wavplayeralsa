@@ -50,10 +50,12 @@ void protobuf_AssignDesc_position_5freport_2eproto() {
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(PositionReportMsg));
   PositionReportMsg_Song_descriptor_ = PositionReportMsg_descriptor_->nested_type(0);
-  static const int PositionReportMsg_Song_offsets_[3] = {
+  static const int PositionReportMsg_Song_offsets_[5] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(PositionReportMsg_Song, song_name_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(PositionReportMsg_Song, position_in_ms_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(PositionReportMsg_Song, volume_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(PositionReportMsg_Song, position_cookie_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(PositionReportMsg_Song, guid_),
   };
   PositionReportMsg_Song_reflection_ =
     new ::google::protobuf::internal::GeneratedMessageReflection(
@@ -100,10 +102,11 @@ void protobuf_AddDesc_position_5freport_2eproto() {
   GOOGLE_PROTOBUF_VERIFY_VERSION;
 
   ::google::protobuf::DescriptorPool::InternalAddGeneratedFile(
-    "\n\025position_report.proto\"~\n\021PositionRepor"
-    "tMsg\022&\n\005songs\030\001 \003(\0132\027.PositionReportMsg."
-    "Song\032A\n\004Song\022\021\n\tsong_name\030\001 \002(\t\022\026\n\016posit"
-    "ion_in_ms\030\002 \002(\r\022\016\n\006volume\030\003 \002(\001", 151);
+    "\n\025position_report.proto\"\245\001\n\021PositionRepo"
+    "rtMsg\022&\n\005songs\030\001 \003(\0132\027.PositionReportMsg"
+    ".Song\032h\n\004Song\022\021\n\tsong_name\030\001 \002(\t\022\026\n\016posi"
+    "tion_in_ms\030\002 \002(\r\022\016\n\006volume\030\003 \002(\001\022\027\n\017posi"
+    "tion_cookie\030\004 \002(\r\022\014\n\004guid\030\005 \002(\r", 191);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "position_report.proto", &protobuf_RegisterTypes);
   PositionReportMsg::default_instance_ = new PositionReportMsg();
@@ -126,6 +129,8 @@ struct StaticDescriptorInitializer_position_5freport_2eproto {
 const int PositionReportMsg_Song::kSongNameFieldNumber;
 const int PositionReportMsg_Song::kPositionInMsFieldNumber;
 const int PositionReportMsg_Song::kVolumeFieldNumber;
+const int PositionReportMsg_Song::kPositionCookieFieldNumber;
+const int PositionReportMsg_Song::kGuidFieldNumber;
 #endif  // !_MSC_VER
 
 PositionReportMsg_Song::PositionReportMsg_Song()
@@ -150,6 +155,8 @@ void PositionReportMsg_Song::SharedCtor() {
   song_name_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
   position_in_ms_ = 0u;
   volume_ = 0;
+  position_cookie_ = 0u;
+  guid_ = 0u;
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
 }
 
@@ -198,8 +205,8 @@ void PositionReportMsg_Song::Clear() {
     ::memset(&first, 0, n);                                \
   } while (0)
 
-  if (_has_bits_[0 / 32] & 7) {
-    ZR_(volume_, position_in_ms_);
+  if (_has_bits_[0 / 32] & 31) {
+    ZR_(volume_, guid_);
     if (has_song_name()) {
       if (song_name_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
         song_name_->clear();
@@ -266,6 +273,36 @@ bool PositionReportMsg_Song::MergePartialFromCodedStream(
         } else {
           goto handle_unusual;
         }
+        if (input->ExpectTag(32)) goto parse_position_cookie;
+        break;
+      }
+
+      // required uint32 position_cookie = 4;
+      case 4: {
+        if (tag == 32) {
+         parse_position_cookie:
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   ::google::protobuf::uint32, ::google::protobuf::internal::WireFormatLite::TYPE_UINT32>(
+                 input, &position_cookie_)));
+          set_has_position_cookie();
+        } else {
+          goto handle_unusual;
+        }
+        if (input->ExpectTag(40)) goto parse_guid;
+        break;
+      }
+
+      // required uint32 guid = 5;
+      case 5: {
+        if (tag == 40) {
+         parse_guid:
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   ::google::protobuf::uint32, ::google::protobuf::internal::WireFormatLite::TYPE_UINT32>(
+                 input, &guid_)));
+          set_has_guid();
+        } else {
+          goto handle_unusual;
+        }
         if (input->ExpectAtEnd()) goto success;
         break;
       }
@@ -315,6 +352,16 @@ void PositionReportMsg_Song::SerializeWithCachedSizes(
     ::google::protobuf::internal::WireFormatLite::WriteDouble(3, this->volume(), output);
   }
 
+  // required uint32 position_cookie = 4;
+  if (has_position_cookie()) {
+    ::google::protobuf::internal::WireFormatLite::WriteUInt32(4, this->position_cookie(), output);
+  }
+
+  // required uint32 guid = 5;
+  if (has_guid()) {
+    ::google::protobuf::internal::WireFormatLite::WriteUInt32(5, this->guid(), output);
+  }
+
   if (!unknown_fields().empty()) {
     ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
         unknown_fields(), output);
@@ -346,6 +393,16 @@ void PositionReportMsg_Song::SerializeWithCachedSizes(
     target = ::google::protobuf::internal::WireFormatLite::WriteDoubleToArray(3, this->volume(), target);
   }
 
+  // required uint32 position_cookie = 4;
+  if (has_position_cookie()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(4, this->position_cookie(), target);
+  }
+
+  // required uint32 guid = 5;
+  if (has_guid()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(5, this->guid(), target);
+  }
+
   if (!unknown_fields().empty()) {
     target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
         unknown_fields(), target);
@@ -375,6 +432,20 @@ int PositionReportMsg_Song::ByteSize() const {
     // required double volume = 3;
     if (has_volume()) {
       total_size += 1 + 8;
+    }
+
+    // required uint32 position_cookie = 4;
+    if (has_position_cookie()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::UInt32Size(
+          this->position_cookie());
+    }
+
+    // required uint32 guid = 5;
+    if (has_guid()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::UInt32Size(
+          this->guid());
     }
 
   }
@@ -413,6 +484,12 @@ void PositionReportMsg_Song::MergeFrom(const PositionReportMsg_Song& from) {
     if (from.has_volume()) {
       set_volume(from.volume());
     }
+    if (from.has_position_cookie()) {
+      set_position_cookie(from.position_cookie());
+    }
+    if (from.has_guid()) {
+      set_guid(from.guid());
+    }
   }
   mutable_unknown_fields()->MergeFrom(from.unknown_fields());
 }
@@ -430,7 +507,7 @@ void PositionReportMsg_Song::CopyFrom(const PositionReportMsg_Song& from) {
 }
 
 bool PositionReportMsg_Song::IsInitialized() const {
-  if ((_has_bits_[0] & 0x00000007) != 0x00000007) return false;
+  if ((_has_bits_[0] & 0x0000001f) != 0x0000001f) return false;
 
   return true;
 }
@@ -440,6 +517,8 @@ void PositionReportMsg_Song::Swap(PositionReportMsg_Song* other) {
     std::swap(song_name_, other->song_name_);
     std::swap(position_in_ms_, other->position_in_ms_);
     std::swap(volume_, other->volume_);
+    std::swap(position_cookie_, other->position_cookie_);
+    std::swap(guid_, other->guid_);
     std::swap(_has_bits_[0], other->_has_bits_[0]);
     _unknown_fields_.Swap(&other->_unknown_fields_);
     std::swap(_cached_size_, other->_cached_size_);

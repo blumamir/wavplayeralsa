@@ -12,7 +12,7 @@ namespace wavplayeralsa {
 	public:
 		PositionReporter();
 		void initialize(uint16_t broadcastPort);
-		void sendNewPosition(const std::string &filename, unsigned int currPosition);
+		void sendNewPosition(const std::string &filename, unsigned int currPosition, uint32_t positionCookie);
 		void sendNoTracksPlaying();
 
 	private:
@@ -20,6 +20,8 @@ namespace wavplayeralsa {
 		uint16_t m_broadcastPort;
 		struct sockaddr_in addr;
 		struct in_addr localInterface;
+		uint32_t guid;
+
 	};
 
 }

@@ -115,6 +115,20 @@ class PositionReportMsg_Song : public ::google::protobuf::Message {
   inline double volume() const;
   inline void set_volume(double value);
 
+  // required uint32 position_cookie = 4;
+  inline bool has_position_cookie() const;
+  inline void clear_position_cookie();
+  static const int kPositionCookieFieldNumber = 4;
+  inline ::google::protobuf::uint32 position_cookie() const;
+  inline void set_position_cookie(::google::protobuf::uint32 value);
+
+  // required uint32 guid = 5;
+  inline bool has_guid() const;
+  inline void clear_guid();
+  static const int kGuidFieldNumber = 5;
+  inline ::google::protobuf::uint32 guid() const;
+  inline void set_guid(::google::protobuf::uint32 value);
+
   // @@protoc_insertion_point(class_scope:PositionReportMsg.Song)
  private:
   inline void set_has_song_name();
@@ -123,6 +137,10 @@ class PositionReportMsg_Song : public ::google::protobuf::Message {
   inline void clear_has_position_in_ms();
   inline void set_has_volume();
   inline void clear_has_volume();
+  inline void set_has_position_cookie();
+  inline void clear_has_position_cookie();
+  inline void set_has_guid();
+  inline void clear_has_guid();
 
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
@@ -131,6 +149,8 @@ class PositionReportMsg_Song : public ::google::protobuf::Message {
   ::std::string* song_name_;
   double volume_;
   ::google::protobuf::uint32 position_in_ms_;
+  ::google::protobuf::uint32 position_cookie_;
+  ::google::protobuf::uint32 guid_;
   friend void  protobuf_AddDesc_position_5freport_2eproto();
   friend void protobuf_AssignDesc_position_5freport_2eproto();
   friend void protobuf_ShutdownFile_position_5freport_2eproto();
@@ -351,6 +371,54 @@ inline void PositionReportMsg_Song::set_volume(double value) {
   set_has_volume();
   volume_ = value;
   // @@protoc_insertion_point(field_set:PositionReportMsg.Song.volume)
+}
+
+// required uint32 position_cookie = 4;
+inline bool PositionReportMsg_Song::has_position_cookie() const {
+  return (_has_bits_[0] & 0x00000008u) != 0;
+}
+inline void PositionReportMsg_Song::set_has_position_cookie() {
+  _has_bits_[0] |= 0x00000008u;
+}
+inline void PositionReportMsg_Song::clear_has_position_cookie() {
+  _has_bits_[0] &= ~0x00000008u;
+}
+inline void PositionReportMsg_Song::clear_position_cookie() {
+  position_cookie_ = 0u;
+  clear_has_position_cookie();
+}
+inline ::google::protobuf::uint32 PositionReportMsg_Song::position_cookie() const {
+  // @@protoc_insertion_point(field_get:PositionReportMsg.Song.position_cookie)
+  return position_cookie_;
+}
+inline void PositionReportMsg_Song::set_position_cookie(::google::protobuf::uint32 value) {
+  set_has_position_cookie();
+  position_cookie_ = value;
+  // @@protoc_insertion_point(field_set:PositionReportMsg.Song.position_cookie)
+}
+
+// required uint32 guid = 5;
+inline bool PositionReportMsg_Song::has_guid() const {
+  return (_has_bits_[0] & 0x00000010u) != 0;
+}
+inline void PositionReportMsg_Song::set_has_guid() {
+  _has_bits_[0] |= 0x00000010u;
+}
+inline void PositionReportMsg_Song::clear_has_guid() {
+  _has_bits_[0] &= ~0x00000010u;
+}
+inline void PositionReportMsg_Song::clear_guid() {
+  guid_ = 0u;
+  clear_has_guid();
+}
+inline ::google::protobuf::uint32 PositionReportMsg_Song::guid() const {
+  // @@protoc_insertion_point(field_get:PositionReportMsg.Song.guid)
+  return guid_;
+}
+inline void PositionReportMsg_Song::set_guid(::google::protobuf::uint32 value) {
+  set_has_guid();
+  guid_ = value;
+  // @@protoc_insertion_point(field_set:PositionReportMsg.Song.guid)
 }
 
 // -------------------------------------------------------------------

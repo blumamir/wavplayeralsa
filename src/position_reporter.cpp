@@ -9,12 +9,16 @@
 #include <string.h>
 #include <stdio.h>
 #include <iostream>
+#include <random>
 
 
 namespace wavplayeralsa {
 
 	PositionReporter::PositionReporter() {
-
+	    std::default_random_engine eng((std::random_device())());
+	    std::uniform_int_distribution<uint32_t> idis(0, std::numeric_limits<uint32_t>::max());
+	    this->guid = idis(eng);
+	    std::cout << "guid for this player is: " << this->guid << std::endl;
 	}
 
 	void PositionReporter::initialize(uint16_t broadcastPort) {
@@ -41,13 +45,15 @@ namespace wavplayeralsa {
 
 	}
 
-	void PositionReporter::sendNewPosition(const std::string &filename, unsigned int currPosition) {
+	void PositionReporter::sendNewPosition(const std::string &filename, unsigned int currPosition, uint32_t positionCookie) {
 
 		PositionReportMsg prProto;
 		PositionReportMsg::Song *s = prProto.add_songs();
 		s->set_song_name(filename);
 		s->set_position_in_ms(currPosition);
 		s->set_volume(1.0);
+		s->set_position_cookie(positionCookie);
+		s->set_guid(this->guid);
 		std::string outputBuf;
 		prProto.SerializeToString(&outputBuf);
 
@@ -70,4 +76,5 @@ namespace wavplayeralsa {
 			exit(1);
 		}
 	}
+
 }

@@ -171,6 +171,40 @@ public final class PositionReport {
        * <code>required double volume = 3;</code>
        */
       double getVolume();
+
+      /**
+       * <code>required uint32 position_cookie = 4;</code>
+       *
+       * <pre>
+       * this id will change when position is altered externally (not advanced naturally with time)
+       * </pre>
+       */
+      boolean hasPositionCookie();
+      /**
+       * <code>required uint32 position_cookie = 4;</code>
+       *
+       * <pre>
+       * this id will change when position is altered externally (not advanced naturally with time)
+       * </pre>
+       */
+      int getPositionCookie();
+
+      /**
+       * <code>required uint32 guid = 5;</code>
+       *
+       * <pre>
+       * global unique id - used to identify if the instance of the player changed.
+       * </pre>
+       */
+      boolean hasGuid();
+      /**
+       * <code>required uint32 guid = 5;</code>
+       *
+       * <pre>
+       * global unique id - used to identify if the instance of the player changed.
+       * </pre>
+       */
+      int getGuid();
     }
     /**
      * Protobuf type {@code PositionReportMsg.Song}
@@ -238,6 +272,16 @@ public final class PositionReport {
               case 25: {
                 bitField0_ |= 0x00000004;
                 volume_ = input.readDouble();
+                break;
+              }
+              case 32: {
+                bitField0_ |= 0x00000008;
+                positionCookie_ = input.readUInt32();
+                break;
+              }
+              case 40: {
+                bitField0_ |= 0x00000010;
+                guid_ = input.readUInt32();
                 break;
               }
             }
@@ -352,10 +396,58 @@ public final class PositionReport {
         return volume_;
       }
 
+      public static final int POSITION_COOKIE_FIELD_NUMBER = 4;
+      private int positionCookie_;
+      /**
+       * <code>required uint32 position_cookie = 4;</code>
+       *
+       * <pre>
+       * this id will change when position is altered externally (not advanced naturally with time)
+       * </pre>
+       */
+      public boolean hasPositionCookie() {
+        return ((bitField0_ & 0x00000008) == 0x00000008);
+      }
+      /**
+       * <code>required uint32 position_cookie = 4;</code>
+       *
+       * <pre>
+       * this id will change when position is altered externally (not advanced naturally with time)
+       * </pre>
+       */
+      public int getPositionCookie() {
+        return positionCookie_;
+      }
+
+      public static final int GUID_FIELD_NUMBER = 5;
+      private int guid_;
+      /**
+       * <code>required uint32 guid = 5;</code>
+       *
+       * <pre>
+       * global unique id - used to identify if the instance of the player changed.
+       * </pre>
+       */
+      public boolean hasGuid() {
+        return ((bitField0_ & 0x00000010) == 0x00000010);
+      }
+      /**
+       * <code>required uint32 guid = 5;</code>
+       *
+       * <pre>
+       * global unique id - used to identify if the instance of the player changed.
+       * </pre>
+       */
+      public int getGuid() {
+        return guid_;
+      }
+
       private void initFields() {
         songName_ = "";
         positionInMs_ = 0;
         volume_ = 0D;
+        positionCookie_ = 0;
+        guid_ = 0;
       }
       private byte memoizedIsInitialized = -1;
       public final boolean isInitialized() {
@@ -375,6 +467,14 @@ public final class PositionReport {
           memoizedIsInitialized = 0;
           return false;
         }
+        if (!hasPositionCookie()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+        if (!hasGuid()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
         memoizedIsInitialized = 1;
         return true;
       }
@@ -390,6 +490,12 @@ public final class PositionReport {
         }
         if (((bitField0_ & 0x00000004) == 0x00000004)) {
           output.writeDouble(3, volume_);
+        }
+        if (((bitField0_ & 0x00000008) == 0x00000008)) {
+          output.writeUInt32(4, positionCookie_);
+        }
+        if (((bitField0_ & 0x00000010) == 0x00000010)) {
+          output.writeUInt32(5, guid_);
         }
         getUnknownFields().writeTo(output);
       }
@@ -411,6 +517,14 @@ public final class PositionReport {
         if (((bitField0_ & 0x00000004) == 0x00000004)) {
           size += com.google.protobuf.CodedOutputStream
             .computeDoubleSize(3, volume_);
+        }
+        if (((bitField0_ & 0x00000008) == 0x00000008)) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeUInt32Size(4, positionCookie_);
+        }
+        if (((bitField0_ & 0x00000010) == 0x00000010)) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeUInt32Size(5, guid_);
         }
         size += getUnknownFields().getSerializedSize();
         memoizedSerializedSize = size;
@@ -535,6 +649,10 @@ public final class PositionReport {
           bitField0_ = (bitField0_ & ~0x00000002);
           volume_ = 0D;
           bitField0_ = (bitField0_ & ~0x00000004);
+          positionCookie_ = 0;
+          bitField0_ = (bitField0_ & ~0x00000008);
+          guid_ = 0;
+          bitField0_ = (bitField0_ & ~0x00000010);
           return this;
         }
 
@@ -575,6 +693,14 @@ public final class PositionReport {
             to_bitField0_ |= 0x00000004;
           }
           result.volume_ = volume_;
+          if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+            to_bitField0_ |= 0x00000008;
+          }
+          result.positionCookie_ = positionCookie_;
+          if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
+            to_bitField0_ |= 0x00000010;
+          }
+          result.guid_ = guid_;
           result.bitField0_ = to_bitField0_;
           onBuilt();
           return result;
@@ -602,6 +728,12 @@ public final class PositionReport {
           if (other.hasVolume()) {
             setVolume(other.getVolume());
           }
+          if (other.hasPositionCookie()) {
+            setPositionCookie(other.getPositionCookie());
+          }
+          if (other.hasGuid()) {
+            setGuid(other.getGuid());
+          }
           this.mergeUnknownFields(other.getUnknownFields());
           return this;
         }
@@ -616,6 +748,14 @@ public final class PositionReport {
             return false;
           }
           if (!hasVolume()) {
+            
+            return false;
+          }
+          if (!hasPositionCookie()) {
+            
+            return false;
+          }
+          if (!hasGuid()) {
             
             return false;
           }
@@ -777,6 +917,102 @@ public final class PositionReport {
         public Builder clearVolume() {
           bitField0_ = (bitField0_ & ~0x00000004);
           volume_ = 0D;
+          onChanged();
+          return this;
+        }
+
+        private int positionCookie_ ;
+        /**
+         * <code>required uint32 position_cookie = 4;</code>
+         *
+         * <pre>
+         * this id will change when position is altered externally (not advanced naturally with time)
+         * </pre>
+         */
+        public boolean hasPositionCookie() {
+          return ((bitField0_ & 0x00000008) == 0x00000008);
+        }
+        /**
+         * <code>required uint32 position_cookie = 4;</code>
+         *
+         * <pre>
+         * this id will change when position is altered externally (not advanced naturally with time)
+         * </pre>
+         */
+        public int getPositionCookie() {
+          return positionCookie_;
+        }
+        /**
+         * <code>required uint32 position_cookie = 4;</code>
+         *
+         * <pre>
+         * this id will change when position is altered externally (not advanced naturally with time)
+         * </pre>
+         */
+        public Builder setPositionCookie(int value) {
+          bitField0_ |= 0x00000008;
+          positionCookie_ = value;
+          onChanged();
+          return this;
+        }
+        /**
+         * <code>required uint32 position_cookie = 4;</code>
+         *
+         * <pre>
+         * this id will change when position is altered externally (not advanced naturally with time)
+         * </pre>
+         */
+        public Builder clearPositionCookie() {
+          bitField0_ = (bitField0_ & ~0x00000008);
+          positionCookie_ = 0;
+          onChanged();
+          return this;
+        }
+
+        private int guid_ ;
+        /**
+         * <code>required uint32 guid = 5;</code>
+         *
+         * <pre>
+         * global unique id - used to identify if the instance of the player changed.
+         * </pre>
+         */
+        public boolean hasGuid() {
+          return ((bitField0_ & 0x00000010) == 0x00000010);
+        }
+        /**
+         * <code>required uint32 guid = 5;</code>
+         *
+         * <pre>
+         * global unique id - used to identify if the instance of the player changed.
+         * </pre>
+         */
+        public int getGuid() {
+          return guid_;
+        }
+        /**
+         * <code>required uint32 guid = 5;</code>
+         *
+         * <pre>
+         * global unique id - used to identify if the instance of the player changed.
+         * </pre>
+         */
+        public Builder setGuid(int value) {
+          bitField0_ |= 0x00000010;
+          guid_ = value;
+          onChanged();
+          return this;
+        }
+        /**
+         * <code>required uint32 guid = 5;</code>
+         *
+         * <pre>
+         * global unique id - used to identify if the instance of the player changed.
+         * </pre>
+         */
+        public Builder clearGuid() {
+          bitField0_ = (bitField0_ & ~0x00000010);
+          guid_ = 0;
           onChanged();
           return this;
         }
@@ -1369,10 +1605,11 @@ public final class PositionReport {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\025position_report.proto\"~\n\021PositionRepor" +
-      "tMsg\022&\n\005songs\030\001 \003(\0132\027.PositionReportMsg." +
-      "Song\032A\n\004Song\022\021\n\tsong_name\030\001 \002(\t\022\026\n\016posit" +
-      "ion_in_ms\030\002 \002(\r\022\016\n\006volume\030\003 \002(\001"
+      "\n\025position_report.proto\"\245\001\n\021PositionRepo" +
+      "rtMsg\022&\n\005songs\030\001 \003(\0132\027.PositionReportMsg" +
+      ".Song\032h\n\004Song\022\021\n\tsong_name\030\001 \002(\t\022\026\n\016posi" +
+      "tion_in_ms\030\002 \002(\r\022\016\n\006volume\030\003 \002(\001\022\027\n\017posi" +
+      "tion_cookie\030\004 \002(\r\022\014\n\004guid\030\005 \002(\r"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -1397,7 +1634,7 @@ public final class PositionReport {
     internal_static_PositionReportMsg_Song_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_PositionReportMsg_Song_descriptor,
-        new java.lang.String[] { "SongName", "PositionInMs", "Volume", });
+        new java.lang.String[] { "SongName", "PositionInMs", "Volume", "PositionCookie", "Guid", });
   }
 
   // @@protoc_insertion_point(outer_class_scope)
