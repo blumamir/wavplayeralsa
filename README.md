@@ -2,17 +2,22 @@
 ## Installation process (tested on Raspbian and Ubuntu)
 0. Install Raspbian https://www.raspberrypi.org/documentation/installation/installing-images/
 1. Install protobuf 2.6.1
+```
   wget https://github.com/protocolbuffers/protobuf/releases/download/v2.6.1/protobuf-2.6.1.tar.gz
   tar -xvzf protobuf-2.6.1.tar.gz
-   cd protobuf-2.6.1/
-   ./configure
-   make
-   make check
-   sudo make install
-   sudo ldconfig
+  cd protobuf-2.6.1/
+  ./configure
+  make
+  make check
+  sudo make install
+  sudo ldconfig
+``` 
 2. Install zmq
+```
   sudo apt-get install libzmq3-dev
+```  
 3. Install cppzmq using cmake
+```
   wget https://github.com/zeromq/cppzmq/archive/v4.3.0.tar.gz
   tar xzvf v4.3.0.tar.gz
   cd cppzmq-4.3.0/
@@ -22,20 +27,27 @@
   cmake ..
   sudo make -j4 install
   cd ../..
+```
 4. Install sndfile and libsound libs
+```
   sudo apt-get install libsndfile1-dev libasound2-dev
+```  
 5. Install cxxopts lib
+```
   wget https://github.com/jarro2783/cxxopts/archive/v2.1.1.tar.gz
   tar xzvf v2.1.1.tar.gz
   cd cxxopts-2.1.1
   cmake .
   make -j4
   sudo make -j4 install
+```  
 6. Clone the wavplayeralsa project and compile it
+```
   git clone https://github.com/BlumAmir/wavplayeralsa.git
   cd wavplayeralsa/
   cmake .
   make
+```
 7. Create a configuration file for the player
 
 ## Player description
@@ -45,13 +57,16 @@
 
 ## Usage
 The executable supports a few commandline arguments, for a list of available options use ./wavplayeralsa -h
+
 To play a specific file use ./wavplayeralsa -f <filename>.wav
 
 ## Control interface
 To control and query the player state a Zero MQ socket can be opened to port 2100 (default), the port can be changed using the commandline parameter --cmd_ifc_port <port>
   
 The socket should be of type REQ/REP
+
 The message content is described in the file player_command.proto, command to the player should be of type PlayerCommandMsg, afterwards the player will always respond with a PlayerCommandReplyMsg
+
 If a command is not specified the reply message still contains the current song name and an indication if a song is playing (can be useful for polling the player)
 
 ## Position report interface
