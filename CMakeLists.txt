@@ -24,5 +24,7 @@ set (SOURCES
 	src/generated/player_command.pb.cc
 )
 
+set(CMAKE_BUILD_TYPE Debug)
+
 add_executable (wavplayeralsa ${SOURCES})
 target_link_libraries(wavplayeralsa -lasound -lsndfile -pthread cppzmq ${PROTOBUF_LIBRARY})
