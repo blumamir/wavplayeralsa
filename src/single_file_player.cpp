@@ -33,18 +33,8 @@ namespace wavplayeralsa {
 
 			m_playStatusMutex.lock();
 			if(m_playStatus != Playing) {
-
-				// clear the content of the buffer
-				int err;
-				std::stringstream errDesc;
-				if( (err = snd_pcm_drop(m_alsaPlaybackHandle)) < 0 ) {
-					errDesc << "snd_pcm_drop failed (" << snd_strerror(err) << ")";
-					m_playStatusMutex.unlock();
-					throw std::runtime_error(errDesc.str());
-				}
-				m_playStatus = Stopped;
 				m_playStatusMutex.unlock();
-				return;
+				break;
 			}
 			m_playStatusMutex.unlock();
 
@@ -91,6 +81,36 @@ namespace wavplayeralsa {
 
 		}
 
+		// we will be out of the loop if we finished writing frames to pcm.
+		// now we only wait for the play to end
+
+		while(true) {
+
+			m_playStatusMutex.lock();
+			if(!isAlsaStatePlaying()) {
+				m_playStatus = Stopping;
+			}
+
+			if(m_playStatus != Playing) {
+				// clear the content of the buffer
+				std::cout << "done playing current song. reached end of buffer and pcm is empty" << std::endl;
+				int err;
+				std::stringstream errDesc;
+				if( (err = snd_pcm_drop(m_alsaPlaybackHandle)) < 0 ) {
+					errDesc << "snd_pcm_drop failed (" << snd_strerror(err) << ")";
+					m_playStatusMutex.unlock();
+					throw std::runtime_error(errDesc.str());
+				}
+				m_playStatus = Stopped;
+				m_playStatusMutex.unlock();
+				return;				
+			}
+			m_playStatusMutex.unlock();
+
+			std::chrono::milliseconds sleepTimeMs(100);
+			std::this_thread::sleep_for(sleepTimeMs);
+		}
+
 	}
 
 	unsigned int SingleFilePlayer::getPositionInMs() {
@@ -118,7 +138,16 @@ namespace wavplayeralsa {
 		return (posInFrames * 1000) / m_frameRate;
 	}
 
+	// can be called from other thread
 	bool SingleFilePlayer::isPlaying() {
+		bool retValue;
+		m_playStatusMutex.lock();
+		retValue = (m_playStatus == Playing);
+		m_playStatusMutex.unlock();
+		return retValue;		
+	}
+
+	bool SingleFilePlayer::isAlsaStatePlaying() {
 		int status = snd_pcm_state(m_alsaPlaybackHandle);
 		return (status == SND_PCM_STATE_RUNNING) || (status == SND_PCM_STATE_PREPARED);
 	}
@@ -136,7 +165,6 @@ namespace wavplayeralsa {
 		std::stringstream errDesc;
 		if( (err = snd_pcm_prepare(m_alsaPlaybackHandle)) < 0 ) {
 			errDesc << "snd_pcm_prepare failed (" << snd_strerror(err) << ")";
-			m_playStatusMutex.unlock();
 			throw std::runtime_error(errDesc.str());
 		}
 
@@ -145,6 +173,7 @@ namespace wavplayeralsa {
 	}
 
 	void SingleFilePlayer::stop() {
+		std::cout << "stop is called on current alsa player (for the current song)." << std::endl;
 		m_playStatusMutex.lock();
 		if(m_playStatus == Stopped) {
 			m_playStatusMutex.unlock();			

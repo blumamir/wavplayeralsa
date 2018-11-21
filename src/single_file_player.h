@@ -36,6 +36,7 @@ namespace wavplayeralsa {
 	private:
 		void initSndFile();
 		void initAlsa();
+		bool isAlsaStatePlaying();
 
 	private:
 		void playLoopOnThread();
