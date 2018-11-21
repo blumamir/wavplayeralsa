@@ -166,15 +166,11 @@ int main(int argc, char *argv[]) {
 
 					if(player != NULL) {
 						player->startPlay(newSongReq.position_in_ms());
+						positionCookie++;
+						std::cout << "new position cookie is: " << positionCookie << std::endl;
 					}
 
 				}
-			}
-
-			// so we handled a new request which was successfull, we increase the position cookie to signal that the position has changed externally
-			if(reqStatus == true) {
-				positionCookie++;
-				std::cout << "new position cookie is: " << positionCookie << std::endl;
 			}
 
 			PlayerCommandReplyMsg replyProtoMsg;
