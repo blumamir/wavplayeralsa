@@ -4,6 +4,7 @@
 #include <string>
 #include <thread>
 #include <mutex>
+#include <cstdint>
 
 #include <alsa/asoundlib.h>
 
@@ -28,9 +29,9 @@ namespace wavplayeralsa {
 
 		const std::string &getFileToPlay();
 		void initialize(const std::string &path, const std::string &fileName);
-		void startPlay(unsigned int positionInMs);
+		void startPlay(uint32_t positionInMs);
 		void stop();
-		unsigned int getPositionInMs();
+		uint32_t getPositionInMs();
 		bool isPlaying();
 
 	private:
@@ -64,7 +65,7 @@ namespace wavplayeralsa {
 	private:
 		bool GetFormatForAlsa(snd_pcm_format_t &outFormat);
 		snd_pcm_t *m_alsaPlaybackHandle;
-		snd_pcm_sframes_t m_currPositionInFrames = 0;
+		uint64_t m_currPositionInFrames = 0;
 		std::mutex m_currPositionMutex;
 		bool m_alsaInitialized = false;
 

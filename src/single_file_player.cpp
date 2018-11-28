@@ -113,10 +113,10 @@ namespace wavplayeralsa {
 
 	}
 
-	unsigned int SingleFilePlayer::getPositionInMs() {
+	uint32_t SingleFilePlayer::getPositionInMs() {
 		int err;
 	 	snd_pcm_sframes_t delay;
-	 	snd_pcm_sframes_t posInFrames;
+	 	uint64_t posInFrames;
 
 	 	m_playStatusMutex.lock();
 	 	if(m_playStatus != Playing) {
@@ -135,7 +135,7 @@ namespace wavplayeralsa {
  		}
 		m_currPositionMutex.unlock();
 
-		return (posInFrames * 1000) / m_frameRate;
+		return (uint32_t)((posInFrames * (uint64_t)1000) / (uint64_t)m_frameRate);
 	}
 
 	// can be called from other thread
@@ -152,7 +152,7 @@ namespace wavplayeralsa {
 		return (status == SND_PCM_STATE_RUNNING) || (status == SND_PCM_STATE_PREPARED);
 	}
 
-	void SingleFilePlayer::startPlay(unsigned int positionInMs) {
+	void SingleFilePlayer::startPlay(uint32_t positionInMs) {
 
 		m_currPositionInFrames = (positionInMs / 1000.0) * m_frameRate; 
 		if(m_currPositionInFrames > m_totalFrames) {
