@@ -58,7 +58,7 @@ namespace wavplayeralsa {
 	    bool m_isEndianLittle = true; // if false the endian is big :)
 	    SampleType m_sampleType = SampleTypeSigned;
 	    unsigned int m_sampleChannelSizeBytes = 2;
-	    snd_pcm_sframes_t m_totalFrames = 0;
+	    uint64_t m_totalFrames = 0;
 	    char *m_rawDataBuffer = NULL;
 	    bool m_sndFileInitialized = false;
 

@@ -11,7 +11,7 @@ namespace wavplayeralsa {
 	SingleFilePlayer::~SingleFilePlayer() {
 
 		if(m_rawDataBuffer != NULL) {
-			delete m_rawDataBuffer;
+			delete[] m_rawDataBuffer;
 			m_rawDataBuffer = NULL;
 		}
 
@@ -58,7 +58,7 @@ namespace wavplayeralsa {
 			framesToDeliver = framesToDeliver > 4096 ? 4096 : framesToDeliver;
 
 			// check that we do not exceed the frames that we acctually have
-			int remainingFrames = m_totalFrames - m_currPositionInFrames;
+			int64_t remainingFrames = 	m_totalFrames - m_currPositionInFrames;
 			if(remainingFrames <= 0) {
 				std::cout << "done writing frames to pcm" << std::endl;
 				break;
@@ -154,7 +154,7 @@ namespace wavplayeralsa {
 
 	void SingleFilePlayer::startPlay(uint32_t positionInMs) {
 
-		m_currPositionInFrames = (positionInMs / 1000.0) * m_frameRate; 
+		m_currPositionInFrames = (positionInMs / 1000.0) * (double)m_frameRate; 
 		if(m_currPositionInFrames > m_totalFrames) {
 			m_currPositionInFrames = m_totalFrames;
 		}
@@ -280,7 +280,7 @@ namespace wavplayeralsa {
 		m_totalFrames = sndFile.frames();
 		std::cout << "total frames in file: " << m_totalFrames << " and total time in ms is: " << (m_totalFrames * 1000) / m_frameRate << std::endl;
 
-		int bufferSize = m_totalFrames * m_channels * m_sampleChannelSizeBytes;
+		uint64_t bufferSize = m_totalFrames * (uint64_t)m_channels * (uint64_t)m_sampleChannelSizeBytes;
 		m_rawDataBuffer = new char[bufferSize];
 		sndFile.readRaw(m_rawDataBuffer, bufferSize);
 
