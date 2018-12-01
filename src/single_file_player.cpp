@@ -115,7 +115,7 @@ namespace wavplayeralsa {
 
 	uint32_t SingleFilePlayer::getPositionInMs() {
 		int err;
-	 	snd_pcm_sframes_t delay;
+	 	snd_pcm_sframes_t delay = 0;
 	 	uint64_t posInFrames;
 
 	 	m_playStatusMutex.lock();
@@ -129,7 +129,7 @@ namespace wavplayeralsa {
  		m_currPositionMutex.lock();
  		{
  			if( (err = snd_pcm_delay(m_alsaPlaybackHandle, &delay)) < 0) {
- 				std::cerr << "cannot query current offset in buffer " << std::endl;
+ 				std::cerr << "cannot query current offset in buffer (" << snd_strerror(err) << ")" << std::endl;
  			}		
  			posInFrames = m_currPositionInFrames - delay; 			
  		}
