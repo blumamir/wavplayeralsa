@@ -16,6 +16,7 @@ namespace wavplayeralsa {
 		void sendNoTracksPlaying();
 
 	private:
+		bool hasNetworkForSend;
 		int fd;
 		uint16_t m_broadcastPort;
 		struct sockaddr_in addr;

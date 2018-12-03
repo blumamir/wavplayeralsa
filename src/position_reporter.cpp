@@ -59,10 +59,18 @@ namespace wavplayeralsa {
 
 		//std::cout << "current position: " << currPosition << " (ms) and " << currPosition / 1000.0 / 60.0 << " (minutes)" << std::endl;
 
-		if (sendto(fd,outputBuf.c_str(),outputBuf.length(),0,(struct sockaddr *) &addr,
-			sizeof(addr)) < 0) {
-			perror("sendto");
-			exit(1);
+		ssize_t bytesSent = sendto(fd,outputBuf.c_str(),outputBuf.length(),0,(struct sockaddr *) &addr, sizeof(addr));
+		if(bytesSent > 0) {
+			if(!hasNetworkForSend) {
+				std::cout << "detected network again. will now send position reports on socket" << std::endl;
+				hasNetworkForSend = true;
+			}
+		}
+		else {
+			if(hasNetworkForSend) {
+				perror("position report send on network failed. will recover when network return");
+				hasNetworkForSend = false;							
+			}
 		}
 	}
 
