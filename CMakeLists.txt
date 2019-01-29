@@ -16,10 +16,14 @@ if(NOT Protobuf_FOUND)
 	message(FATAL_ERROR "Protobuf wat not found. Probably not installed. Install it, then run CMake again")
 endif()
 
+# nlohmann json library (single header only)
+include_directories(thirdparty)
+
 set (SOURCES 
 	src/wavplayeralsa.cpp 
 	src/single_file_player.cpp 
 	src/position_reporter.cpp
+	src/status_reporter.cpp
 	src/generated/position_report.pb.cc
 	src/generated/player_command.pb.cc
 )
@@ -27,4 +31,4 @@ set (SOURCES
 set(CMAKE_BUILD_TYPE Debug)
 
 add_executable (wavplayeralsa ${SOURCES})
-target_link_libraries(wavplayeralsa -lasound -lsndfile -pthread cppzmq ${PROTOBUF_LIBRARY})
+target_link_libraries(wavplayeralsa -lasound -lsndfile -lboost_system -pthread cppzmq ${PROTOBUF_LIBRARY})

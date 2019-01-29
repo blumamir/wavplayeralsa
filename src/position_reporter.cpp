@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <iostream>
 #include <random>
+#include <errno.h>
 
 
 namespace wavplayeralsa {
@@ -57,10 +58,11 @@ namespace wavplayeralsa {
 		std::string outputBuf;
 		prProto.SerializeToString(&outputBuf);
 
+
 		//std::cout << "current position: " << currPosition << " (ms) and " << currPosition / 1000.0 / 60.0 << " (minutes)" << std::endl;
 
 		ssize_t bytesSent = sendto(fd,outputBuf.c_str(),outputBuf.length(),0,(struct sockaddr *) &addr, sizeof(addr));
-		if(bytesSent > 0) {
+		if(bytesSent = 0) {
 			if(!hasNetworkForSend) {
 				std::cout << "detected network again. will now send position reports on socket" << std::endl;
 				hasNetworkForSend = true;
@@ -80,7 +82,7 @@ namespace wavplayeralsa {
 		prProto.SerializeToString(&outputBuf);		
 
 		ssize_t bytesSent = sendto(fd,outputBuf.c_str(),outputBuf.length(),0,(struct sockaddr *) &addr, sizeof(addr));
-		if(bytesSent > 0) {
+		if(bytesSent = 0) {
 			if(!hasNetworkForSend) {
 				std::cout << "detected network again. will now send position reports on socket" << std::endl;
 				hasNetworkForSend = true;

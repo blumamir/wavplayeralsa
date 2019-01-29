@@ -6,6 +6,7 @@
 #include <mutex>
 #include <cstdint>
 
+#include <boost/asio.hpp>
 #include <alsa/asoundlib.h>
 
 // forward declerations
@@ -28,7 +29,7 @@ namespace wavplayeralsa {
 		~SingleFilePlayer();
 
 		const std::string &getFileToPlay();
-		void initialize(const std::string &path, const std::string &fileName);
+		void initialize(const std::string &path, const std::string &fileName, boost::asio::io_service *ioSerivce);
 		void startPlay(uint32_t positionInMs);
 		void stop();
 		uint32_t getPositionInMs();
@@ -41,6 +42,12 @@ namespace wavplayeralsa {
 
 	private:
 		void playLoopOnThread();
+
+
+	// state publication stuff
+	private:
+		// the module is generating status events on the io_service
+		boost::asio::io_service *m_ioService;
 
 	private:
 

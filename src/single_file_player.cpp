@@ -187,7 +187,10 @@ namespace wavplayeralsa {
 		m_playingThread = nullptr;
 	}
 
-	void SingleFilePlayer::initialize(const std::string &path, const std::string &fileName) {
+	void SingleFilePlayer::initialize(const std::string &path, const std::string &fileName, boost::asio::io_service *ioSerivce) {
+
+		m_ioService = ioSerivce;
+
 		std::stringstream fileDirStream;
 
 		std::string wavPath = path;

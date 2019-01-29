@@ -13,6 +13,10 @@
 #include <unistd.h>
 #include <linux/limits.h>
 
+#include <boost/asio.hpp>
+
+#include <status_reporter_ifc.hpp>
+
 
 int main(int argc, char *argv[]) {
 
@@ -23,19 +27,26 @@ int main(int argc, char *argv[]) {
 	wavplayeralsa::PositionReporter pr;
 	wavplayeralsa::SingleFilePlayer *player = NULL;
 
+	wavplayeralsa::StatusReporterIfc *statusReporter = wavplayeralsa::CreateStatusReporter();
+
 
 	cxxopts::Options options("wavplayeralsa", "wav files player with accurate position in audio tracking.");
 	options.add_options()
 		("f,initial_file", "file which will be played on run", cxxopts::value<std::string>())
 		("d,wav_dir", "the directory in which wav files are located", cxxopts::value<std::string>()->default_value(cwdCharArr))
+		("status_report_port", "port on which player opens websocket for status updates to clients", cxxopts::value<uint16_t>()->default_value("9002"))
 		("position_report_port", "port on which live position messages are published over broadcast", cxxopts::value<uint16_t>()->default_value("2001"))
 		("position_report_rate", "the rate for position report messages in ms", cxxopts::value<uint32_t>()->default_value("5"))
 		("cmd_ifc_port", "port to listen for player commands over network", cxxopts::value<uint16_t>()->default_value("2100"))
 		("h, help", "print help")
 		;
 
+	boost::asio::io_service io_service;
+	boost::asio::io_service::work work(io_service);
+
 	int rcvtimeo = 5;
 	uint16_t cmdIfcPort = 2100;
+	uint16_t statusReporterPort = 9002;
 	std::string wavDir;
 
 	try {
@@ -50,11 +61,14 @@ int main(int argc, char *argv[]) {
 		 // position reporter stuff
 		 pr.initialize(optsresult["position_report_port"].as<uint16_t>());
 
+		 // status reporter stuff
+		 statusReporterPort = optsresult["status_report_port"].as<uint16_t>();
+
 		 // player stuff
 		 wavDir = optsresult["wav_dir"].as<std::string>();
 		 if(optsresult.count("initial_file")) {
 		 	player = new wavplayeralsa::SingleFilePlayer();
-		 	player->initialize(wavDir, optsresult["initial_file"].as<std::string>());
+		 	player->initialize(wavDir, optsresult["initial_file"].as<std::string>(), &io_service);
 		 }
 
 		 // commands
@@ -71,6 +85,10 @@ int main(int argc, char *argv[]) {
 		return -1;
 	}
 
+
+	statusReporter->Configure(&io_service, statusReporterPort);
+
+
 	zmq::context_t context(1);
 	zmq::socket_t socket(context, ZMQ_REP);
 	socket.setsockopt(ZMQ_RCVTIMEO, &rcvtimeo, sizeof(int));
@@ -81,7 +99,11 @@ int main(int argc, char *argv[]) {
 
 	if(player != NULL) {
 		player->startPlay(0);
+		statusReporter->UpdateStatus();
 	}
+
+	io_service.run();
+
 
 	uint32_t positionCookie = 1;
 	while(true) {
@@ -150,7 +172,7 @@ int main(int argc, char *argv[]) {
 
 						player = new wavplayeralsa::SingleFilePlayer();
 						try {
-							player->initialize(wavDir, newSongReq.song_name());		
+							player->initialize(wavDir, newSongReq.song_name(), &io_service);		
 							reqStatusDesc << "song successfully changed to '" << newSongToPlay << "'. " <<
 									"new song will start playing at position " << newPositionMs << " ms";
 							reqStatus = true;
