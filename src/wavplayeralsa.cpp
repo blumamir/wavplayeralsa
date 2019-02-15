@@ -14,9 +14,31 @@
 #include <linux/limits.h>
 
 #include <boost/asio.hpp>
+#include <boost/bind.hpp>
 
 #include <status_reporter_ifc.hpp>
+#include "status_update_msg.h"
 
+
+class ThreadsRouter : public wavplayeralsa::StatusUpdateMsg {
+
+public:
+
+	void initialize(boost::asio::io_service *statusReporterIos, wavplayeralsa::StatusReporterIfc *statusReporter) {
+		m_statusReporterIos = statusReporterIos;
+		m_statusReporter = statusReporter;
+	}
+
+public:
+	void NewSongStatus(const std::string &songName, uint64_t startTimeMs, double speed) {
+		m_statusReporterIos->post(boost::bind(&wavplayeralsa::StatusReporterIfc::NewSongStatus, m_statusReporter, songName, startTimeMs, speed));
+	}
+
+private:
+	boost::asio::io_service *m_statusReporterIos;
+	wavplayeralsa::StatusReporterIfc *m_statusReporter;
+
+};
 
 int main(int argc, char *argv[]) {
 
@@ -44,6 +66,9 @@ int main(int argc, char *argv[]) {
 	boost::asio::io_service io_service;
 	boost::asio::io_service::work work(io_service);
 
+	ThreadsRouter threadsRouter;
+	threadsRouter.initialize(&io_service, statusReporter);
+
 	int rcvtimeo = 5;
 	uint16_t cmdIfcPort = 2100;
 	uint16_t statusReporterPort = 9002;
@@ -68,7 +93,7 @@ int main(int argc, char *argv[]) {
 		 wavDir = optsresult["wav_dir"].as<std::string>();
 		 if(optsresult.count("initial_file")) {
 		 	player = new wavplayeralsa::SingleFilePlayer();
-		 	player->initialize(wavDir, optsresult["initial_file"].as<std::string>(), &io_service);
+		 	player->initialize(wavDir, optsresult["initial_file"].as<std::string>(), &threadsRouter);
 		 }
 
 		 // commands
@@ -99,7 +124,6 @@ int main(int argc, char *argv[]) {
 
 	if(player != NULL) {
 		player->startPlay(0);
-		statusReporter->UpdateStatus();
 	}
 
 	io_service.run();
@@ -172,7 +196,7 @@ int main(int argc, char *argv[]) {
 
 						player = new wavplayeralsa::SingleFilePlayer();
 						try {
-							player->initialize(wavDir, newSongReq.song_name(), &io_service);		
+							player->initialize(wavDir, newSongReq.song_name(), &threadsRouter);		
 							reqStatusDesc << "song successfully changed to '" << newSongToPlay << "'. " <<
 									"new song will start playing at position " << newPositionMs << " ms";
 							reqStatus = true;

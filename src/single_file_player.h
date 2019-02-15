@@ -6,8 +6,9 @@
 #include <mutex>
 #include <cstdint>
 
-#include <boost/asio.hpp>
 #include <alsa/asoundlib.h>
+
+#include "status_update_msg.h"
 
 // forward declerations
 class SndfileHandle;
@@ -29,7 +30,7 @@ namespace wavplayeralsa {
 		~SingleFilePlayer();
 
 		const std::string &getFileToPlay();
-		void initialize(const std::string &path, const std::string &fileName, boost::asio::io_service *ioSerivce);
+		void initialize(const std::string &path, const std::string &fileName, StatusUpdateMsg *statusReporter);
 		void startPlay(uint32_t positionInMs);
 		void stop();
 		uint32_t getPositionInMs();
@@ -39,15 +40,11 @@ namespace wavplayeralsa {
 		void initSndFile();
 		void initAlsa();
 		bool isAlsaStatePlaying();
+		void checkSongStartTime();
 
 	private:
 		void playLoopOnThread();
 
-
-	// state publication stuff
-	private:
-		// the module is generating status events on the io_service
-		boost::asio::io_service *m_ioService;
 
 	private:
 
@@ -82,6 +79,10 @@ namespace wavplayeralsa {
 
 	private:
 		std::thread *m_playingThread = NULL;
+
+	private:
+		uint64_t m_songStartTimeMsSinceEphoc = 0;
+		StatusUpdateMsg *m_statusReporter = NULL;
 
 
 	};

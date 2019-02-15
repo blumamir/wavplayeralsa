@@ -3,8 +3,10 @@
 #include <sndfile.hh>
 #include <alsa/asoundlib.h>
 #include <iostream>
+#include <iomanip>
 #include <sstream>
 #include <stdlib.h>
+#include <sys/time.h>
 
 namespace wavplayeralsa {
 
@@ -23,6 +25,43 @@ namespace wavplayeralsa {
 
 	const std::string &SingleFilePlayer::getFileToPlay() { 
 		return m_fileToPlay; 
+	}
+
+	void SingleFilePlayer::checkSongStartTime() {
+		int err;
+		snd_pcm_sframes_t delay = 0;
+		int64_t posInFrames = 0;
+
+ 		// m_currPositionMutex.lock();
+ 		{
+ 			if( (err = snd_pcm_delay(m_alsaPlaybackHandle, &delay)) < 0) {
+ 				std::cerr << "cannot query current offset in buffer (" << snd_strerror(err) << ")" << std::endl;
+ 			}		
+ 			posInFrames = m_currPositionInFrames - delay; 			
+ 		}
+		// m_currPositionMutex.unlock();
+		int64_t msSinceSongStart = ((posInFrames * (int64_t)1000) / (int64_t)m_frameRate);
+
+		struct timeval tv;
+		gettimeofday(&tv, NULL);
+		uint64_t currTimeMsSinceEpoch = (uint64_t)(tv.tv_sec) * 1000 + (uint64_t)(tv.tv_usec) / 1000;
+		uint64_t songStartTimeMsSinceEphoc = (int64_t)currTimeMsSinceEpoch - msSinceSongStart;
+
+		int64_t diffFromPrev = songStartTimeMsSinceEphoc - m_songStartTimeMsSinceEphoc;
+		if(diffFromPrev > 1 || diffFromPrev < -1) {
+			m_statusReporter->NewSongStatus(m_fileToPlay, songStartTimeMsSinceEphoc, 1.0);
+			if(m_songStartTimeMsSinceEphoc > 0) {
+				std::cout << diffFromPrev << "\t" << std::setfill('0') << std::setw(4) << (songStartTimeMsSinceEphoc % 10000) << "\t" << 
+					std::setfill('0') << std::setw(4) << (currTimeMsSinceEpoch % 10000) << "\t" << 
+					msSinceSongStart << "\t" << 
+					posInFrames << "\t" << 
+					m_currPositionInFrames << "\t" << 
+					delay << 
+					std::endl;		
+			}
+		}
+		m_songStartTimeMsSinceEphoc = songStartTimeMsSinceEphoc;
+
 	}
 
 	void SingleFilePlayer::playLoopOnThread() {
@@ -55,7 +94,10 @@ namespace wavplayeralsa {
 					break;
 				}
 			}
-			framesToDeliver = framesToDeliver > 4096 ? 4096 : framesToDeliver;
+
+			// it's more efficient when the following line is commented out (e.g - don't truncate the amount of frames).
+			// I leave the original line here because it might be useful one day (the original example code had this line)
+			// framesToDeliver = framesToDeliver > 4096 ? 4096 : framesToDeliver;
 
 			// check that we do not exceed the frames that we acctually have
 			int64_t remainingFrames = 	m_totalFrames - m_currPositionInFrames;
@@ -68,7 +110,7 @@ namespace wavplayeralsa {
 			}
 
 			// write the frames to the buffer and update m_currPositionInFrames variable
-			m_currPositionMutex.lock();
+			// m_currPositionMutex.lock();
 			{
 				unsigned int offset = m_currPositionInFrames * m_channels * m_sampleChannelSizeBytes;
 				int framesWritten = snd_pcm_writei(m_alsaPlaybackHandle, m_rawDataBuffer + offset, framesToDeliver);
@@ -77,8 +119,14 @@ namespace wavplayeralsa {
 				}
 				m_currPositionInFrames += framesWritten;				
 			}
-			m_currPositionMutex.unlock();
+			// m_currPositionMutex.unlock();
 
+			static int loopIndex = 0;
+			if(loopIndex % 1 == 0)
+			{
+				checkSongStartTime();
+			}
+			loopIndex++;
 		}
 
 		// we will be out of the loop if we finished writing frames to pcm.
@@ -114,28 +162,29 @@ namespace wavplayeralsa {
 	}
 
 	uint32_t SingleFilePlayer::getPositionInMs() {
-		int err;
-	 	snd_pcm_sframes_t delay = 0;
-	 	uint64_t posInFrames;
+		return 0;
+		// int err;
+	 // 	snd_pcm_sframes_t delay = 0;
+	 // 	uint64_t posInFrames;
 
-	 	m_playStatusMutex.lock();
-	 	if(m_playStatus != Playing) {
-	 		m_playStatusMutex.unlock();
-	 		return -1;
-	 	}
-	 	m_playStatusMutex.unlock();
+	 // 	m_playStatusMutex.lock();
+	 // 	if(m_playStatus != Playing) {
+	 // 		m_playStatusMutex.unlock();
+	 // 		return -1;
+	 // 	}
+	 // 	m_playStatusMutex.unlock();
 
 
- 		m_currPositionMutex.lock();
- 		{
- 			if( (err = snd_pcm_delay(m_alsaPlaybackHandle, &delay)) < 0) {
- 				std::cerr << "cannot query current offset in buffer (" << snd_strerror(err) << ")" << std::endl;
- 			}		
- 			posInFrames = m_currPositionInFrames - delay; 			
- 		}
-		m_currPositionMutex.unlock();
+ 	// 	m_currPositionMutex.lock();
+ 	// 	{
+ 	// 		if( (err = snd_pcm_delay(m_alsaPlaybackHandle, &delay)) < 0) {
+ 	// 			std::cerr << "cannot query current offset in buffer (" << snd_strerror(err) << ")" << std::endl;
+ 	// 		}		
+ 	// 		posInFrames = m_currPositionInFrames - delay; 			
+ 	// 	}
+		// m_currPositionMutex.unlock();
 
-		return (uint32_t)((posInFrames * (uint64_t)1000) / (uint64_t)m_frameRate);
+		// return (uint32_t)((posInFrames * (uint64_t)1000) / (uint64_t)m_frameRate);
 	}
 
 	// can be called from other thread
@@ -187,9 +236,9 @@ namespace wavplayeralsa {
 		m_playingThread = nullptr;
 	}
 
-	void SingleFilePlayer::initialize(const std::string &path, const std::string &fileName, boost::asio::io_service *ioSerivce) {
+	void SingleFilePlayer::initialize(const std::string &path, const std::string &fileName, StatusUpdateMsg *statusReporter) {
 
-		m_ioService = ioSerivce;
+		m_statusReporter = statusReporter;
 
 		std::stringstream fileDirStream;
 
