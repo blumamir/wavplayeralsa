@@ -24,6 +24,7 @@ set (SOURCES
 	src/single_file_player.cpp 
 	src/position_reporter.cpp
 	src/status_reporter.cpp
+	src/player_req_http.cpp
 	src/generated/position_report.pb.cc
 	src/generated/player_command.pb.cc
 )

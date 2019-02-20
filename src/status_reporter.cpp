@@ -63,7 +63,7 @@ namespace wavplayeralsa {
 		void NewSongStatus(const std::string &songName, uint64_t startTimeMs, double speed) {
 			json j;
 			j["file_name"] = songName;
-			j["start_time_millis_since_ephoc"] = startTimeMs;
+			j["start_time_millis_since_epoch"] = startTimeMs;
 			j["speed"] = speed;
 			m_lastStatusMsg = j.dump();
 		}

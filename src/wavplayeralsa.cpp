@@ -1,11 +1,9 @@
 
 #include "single_file_player.h"
-#include "position_reporter.h"
 #include "generated/player_command.pb.h"
 #include <iostream>
 #include <sndfile.h>
 #include <cxxopts.hpp>
-#include <zmq.hpp>
 
 #include <string>
 #include <iostream>
@@ -17,6 +15,7 @@
 #include <boost/bind.hpp>
 
 #include <status_reporter_ifc.hpp>
+#include <player_req_http.hpp>
 #include "status_update_msg.h"
 
 
@@ -40,16 +39,85 @@ private:
 
 };
 
+class NewSongHandler : public wavplayeralsa::PlayerRequestIfc {
+
+public:
+
+	NewSongHandler(ThreadsRouter *threadRounter) :
+		m_threadsRouter(threadRounter)
+	{
+
+	}
+
+	void setWavDir(const std::string &wavDir) {
+		m_wavDir = wavDir;
+	}
+
+public:
+	bool NewSongRequest(const std::string &songName, uint64_t startOffsetMs, std::stringstream &outMsg) {
+
+		if(m_player != NULL && songName == m_player->getFileToPlay()) {
+			outMsg << "changed position of the current song '" << songName << "'. new position in ms is: " << startOffsetMs << std::endl;
+		}
+		else {
+			// so the request asks to change the song.
+			// we will first delete the previous song, then try to load the new one.
+			// in case we fail, we will be left with no song at all which is fine
+
+			if(m_player != NULL) {
+				m_player->stop();
+				delete m_player;
+			}
+
+			m_player = new wavplayeralsa::SingleFilePlayer();
+			try {
+				m_player->initialize(m_wavDir, songName, m_threadsRouter);		
+				outMsg << "song successfully changed to '" << songName << "'. " <<
+						"new song will start playing at position " << startOffsetMs << " ms";
+			}
+			catch(const std::runtime_error &e) {
+				delete m_player;
+				m_player = NULL;
+				outMsg << "loading new song '" << songName << "' failed. currently no song is loaded in the player and it is not playing. " <<
+					"reason for failure: " << e.what();
+				return false;
+			}
+		}
+
+		if(m_player != NULL) {
+			m_player->startPlay(startOffsetMs);
+		}
+
+		return true;
+	}
+
+	bool StopPlayRequest(std::stringstream &outMsg) {
+		if(m_player != NULL) {
+			m_player->stop();
+			outMsg << "current song '" << m_player->getFileToPlay() << "' stopped playing";
+		}
+		else {
+			outMsg << "asked to stop song, and there is no song currently playing";
+		}
+		return true;
+	}
+
+private:
+	wavplayeralsa::SingleFilePlayer *m_player = NULL;
+	ThreadsRouter *m_threadsRouter;
+	std::string m_wavDir;
+
+};
+
+
 int main(int argc, char *argv[]) {
 
 	// current directory
 	char cwdCharArr[PATH_MAX];
 	getcwd(cwdCharArr, sizeof(cwdCharArr));
 
-	wavplayeralsa::PositionReporter pr;
-	wavplayeralsa::SingleFilePlayer *player = NULL;
-
 	wavplayeralsa::StatusReporterIfc *statusReporter = wavplayeralsa::CreateStatusReporter();
+	wavplayeralsa::PlayerReqHttp playerReqHttp;
 
 
 	cxxopts::Options options("wavplayeralsa", "wav files player with accurate position in audio tracking.");
@@ -69,10 +137,12 @@ int main(int argc, char *argv[]) {
 	ThreadsRouter threadsRouter;
 	threadsRouter.initialize(&io_service, statusReporter);
 
+	NewSongHandler newSongHandler(&threadsRouter);
+
 	int rcvtimeo = 5;
 	uint16_t cmdIfcPort = 2100;
 	uint16_t statusReporterPort = 9002;
-	std::string wavDir;
+	std::string initialFile;
 
 	try {
 
@@ -83,17 +153,13 @@ int main(int argc, char *argv[]) {
 		 	return 0;
 		 }
 
-		 // position reporter stuff
-		 pr.initialize(optsresult["position_report_port"].as<uint16_t>());
-
 		 // status reporter stuff
 		 statusReporterPort = optsresult["status_report_port"].as<uint16_t>();
 
 		 // player stuff
-		 wavDir = optsresult["wav_dir"].as<std::string>();
+		 newSongHandler.setWavDir(optsresult["wav_dir"].as<std::string>());
 		 if(optsresult.count("initial_file")) {
-		 	player = new wavplayeralsa::SingleFilePlayer();
-		 	player->initialize(wavDir, optsresult["initial_file"].as<std::string>(), &threadsRouter);
+		 	initialFile = optsresult["initial_file"].as<std::string>();
 		 }
 
 		 // commands
@@ -112,132 +178,16 @@ int main(int argc, char *argv[]) {
 
 
 	statusReporter->Configure(&io_service, statusReporterPort);
+	playerReqHttp.Initialize(8080, &io_service, &newSongHandler);
 
 
-	zmq::context_t context(1);
-	zmq::socket_t socket(context, ZMQ_REP);
-	socket.setsockopt(ZMQ_RCVTIMEO, &rcvtimeo, sizeof(int));
-
-	std::stringstream bindStr;
-	bindStr << "tcp://*:" << cmdIfcPort;
-	socket.bind(bindStr.str().c_str());
-
-	if(player != NULL) {
-		player->startPlay(0);
+	if(!initialFile.empty()) {
+		std::stringstream initialFilePlayStatus;
+		bool success = newSongHandler.NewSongRequest(initialFile, 0, initialFilePlayStatus);
 	}
 
 	io_service.run();
-
-
-	uint32_t positionCookie = 1;
-	while(true) {
-
-		// TODO: this code was just for POC. need to arrange it and make it preety
-		zmq::message_t request;
-		bool gotMsg = socket.recv(&request);
-		if(!gotMsg) {
-			if(player != NULL) {
-				if(player->isPlaying()) {
-					unsigned int positionMs = player->getPositionInMs();
-					pr.sendNewPosition(player->getFileToPlay(), positionMs, positionCookie);
-				}
-				else {
-					pr.sendNoTracksPlaying();								
-				}
-			}
-		}
-		else {
-
-			bool reqStatus = true;
-			std::stringstream reqStatusDesc;
-
-			PlayerCommandMsg reqMsg;
-			std::string msgStr(static_cast<char*>(request.data()), request.size());
-			bool success = reqMsg.ParseFromString(msgStr);
-			if(!success) {
-				reqStatus = false;
-				reqStatusDesc << "Failed to parse protobuf message";
-			}
-			else {
-
-				std::cout << "Got player request message " << std::endl << reqMsg.DebugString() << std::endl;
-
-				if(reqMsg.has_stop_play()) {
-					if(player != NULL) {
-						player->stop();
-						reqStatusDesc << "current song '" << player->getFileToPlay() << "' stopped playing";
-						reqStatus = true;
-					}
-					else {
-						reqStatusDesc << "asked to stop song, but there is no song loaded in the player";
-						reqStatus = true;
-					}
-				}
-
-				else if(reqMsg.has_new_song_request()) {
-
-					const PlayerCommandMsg::NewSongRequest &newSongReq = reqMsg.new_song_request();
-					const std::string newSongToPlay = newSongReq.song_name();
-					const unsigned int newPositionMs = newSongReq.position_in_ms(); // will default to 0 if not set
-
-					if(player != NULL && newSongToPlay == player->getFileToPlay()) {
-						reqStatusDesc << "changing the position of the current song '" << player->getFileToPlay() << "'. new position in ms is: " << newPositionMs << std::endl;
-						reqStatus = true;
-					}
-					else {
-						// so the request asks to change the song.
-						// we will first delete the previous song, then try to load the new one.
-						// in case we fail, we will be left with no song at all which is fine
-
-						if(player != NULL) {
-							player->stop();
-							delete player;
-						}
-
-						player = new wavplayeralsa::SingleFilePlayer();
-						try {
-							player->initialize(wavDir, newSongReq.song_name(), &threadsRouter);		
-							reqStatusDesc << "song successfully changed to '" << newSongToPlay << "'. " <<
-									"new song will start playing at position " << newPositionMs << " ms";
-							reqStatus = true;
-						}
-						catch(const std::runtime_error &e) {
-							delete player;
-							player = NULL;
-							reqStatusDesc << "loading new song '" << newSongToPlay << "' failed. currently no song is loaded in the player and it is not playing. " <<
-								"reason for failure: '" << e.what() << "'";
-							reqStatus = false;
-						}
-					}
-
-					if(player != NULL) {
-						player->startPlay(newSongReq.position_in_ms());
-						positionCookie++;
-						std::cout << "new position cookie is: " << positionCookie << std::endl;
-					}
-
-				}
-			}
-
-			PlayerCommandReplyMsg replyProtoMsg;
-			replyProtoMsg.mutable_req_identifier()->CopyFrom(reqMsg.req_identifier());
-			replyProtoMsg.set_req_status(reqStatus);
-			replyProtoMsg.set_req_status_desc(reqStatusDesc.str());
-			replyProtoMsg.set_is_song_playing(player != NULL ? player->isPlaying() : false);
-			if(player != NULL) {
-				replyProtoMsg.set_current_song_path(player->getFileToPlay());
-			}
-
-			std::string replayProtoSerialized;
-			replyProtoMsg.SerializeToString(&replayProtoSerialized);
-			zmq::message_t reply(replayProtoSerialized.size());
-			memcpy(reply.data(), replayProtoSerialized.c_str(), replayProtoSerialized.size());
-			socket.send(reply);
-
-			std::cout << "sent reply: " << std::endl << replyProtoMsg.DebugString();
-		}
-	}
-
+	
 	return 0;
 }
 
