@@ -33,6 +33,10 @@ public:
 		m_statusReporterIos->post(boost::bind(&wavplayeralsa::StatusReporterIfc::NewSongStatus, m_statusReporter, songName, startTimeMs, speed));
 	}
 
+	void NoSongPlayingStatus() {
+		m_statusReporterIos->post(boost::bind(&wavplayeralsa::StatusReporterIfc::NoSongPlayingStatus, m_statusReporter));		
+	}
+
 private:
 	boost::asio::io_service *m_statusReporterIos;
 	wavplayeralsa::StatusReporterIfc *m_statusReporter;
@@ -125,9 +129,7 @@ int main(int argc, char *argv[]) {
 		("f,initial_file", "file which will be played on run", cxxopts::value<std::string>())
 		("d,wav_dir", "the directory in which wav files are located", cxxopts::value<std::string>()->default_value(cwdCharArr))
 		("status_report_port", "port on which player opens websocket for status updates to clients", cxxopts::value<uint16_t>()->default_value("9002"))
-		("position_report_port", "port on which live position messages are published over broadcast", cxxopts::value<uint16_t>()->default_value("2001"))
-		("position_report_rate", "the rate for position report messages in ms", cxxopts::value<uint32_t>()->default_value("5"))
-		("cmd_ifc_port", "port to listen for player commands over network", cxxopts::value<uint16_t>()->default_value("2100"))
+		("http_interface_port", "port on which player listen for http interface (requests and status)", cxxopts::value<uint16_t>()->default_value("80"))
 		("h, help", "print help")
 		;
 
@@ -139,9 +141,8 @@ int main(int argc, char *argv[]) {
 
 	NewSongHandler newSongHandler(&threadsRouter);
 
-	int rcvtimeo = 5;
-	uint16_t cmdIfcPort = 2100;
 	uint16_t statusReporterPort = 9002;
+	uint16_t httpInterfacePort = 80;
 	std::string initialFile;
 
 	try {
@@ -155,16 +156,13 @@ int main(int argc, char *argv[]) {
 
 		 // status reporter stuff
 		 statusReporterPort = optsresult["status_report_port"].as<uint16_t>();
+		 httpInterfacePort = optsresult["http_interface_port"].as<uint16_t>();
 
 		 // player stuff
 		 newSongHandler.setWavDir(optsresult["wav_dir"].as<std::string>());
 		 if(optsresult.count("initial_file")) {
 		 	initialFile = optsresult["initial_file"].as<std::string>();
 		 }
-
-		 // commands
-		 rcvtimeo = optsresult["position_report_rate"].as<uint32_t>();
-		 cmdIfcPort = optsresult["cmd_ifc_port"].as<uint16_t>();
 
 	}
 	catch(const cxxopts::OptionException &e) {
@@ -178,7 +176,7 @@ int main(int argc, char *argv[]) {
 
 
 	statusReporter->Configure(&io_service, statusReporterPort);
-	playerReqHttp.Initialize(8080, &io_service, &newSongHandler);
+	playerReqHttp.Initialize(httpInterfacePort, &io_service, &newSongHandler);
 
 
 	if(!initialFile.empty()) {

@@ -2,6 +2,7 @@
 
 #include <set>
 
+#include <boost/foreach.hpp>
 #include <websocketpp/config/asio_no_tls.hpp>
 #include <websocketpp/server.hpp>
 #include <nlohmann/json.hpp>
@@ -62,13 +63,44 @@ namespace wavplayeralsa {
 
 		void NewSongStatus(const std::string &songName, uint64_t startTimeMs, double speed) {
 			json j;
+			j["song_is_playing"] = true;
 			j["file_name"] = songName;
 			j["start_time_millis_since_epoch"] = startTimeMs;
 			j["speed"] = speed;
-			m_lastStatusMsg = j.dump();
+			UpdateLastStatusMsg(j);
+		}
+
+		void NoSongPlayingStatus() {
+			json j;
+			j["song_is_playing"] = false;
+			UpdateLastStatusMsg(j);
+		}
+
+		void UpdateLastStatusMsg(const json &msgJson) {
+			std::string msgJsonStr = msgJson.dump();
+
+			// Test for msg duplication.
+			// I do not want to assume something about the clients and how they generate
+			// the status messsages, and it is not expensive to do the test.
+			// Since the keys order in json message is undefinded, the same logical message can 
+			// still produce different string representations (maybe? depends on the library),
+			// but that is OK for the use here.
+			if(msgJsonStr == m_lastStatusMsg) {
+				return;
+			}
+
+			m_lastStatusMsg = msgJsonStr;
+			SendToAllConnectedClients();			
 		}
 
 	private:
+
+		void SendToAllConnectedClients() {
+			BOOST_FOREACH(const connection_hdl &hdl, m_connections) {
+		        m_server.send(hdl, m_lastStatusMsg, websocketpp::frame::opcode::text);
+			}			
+		}
+
 	    void on_open(connection_hdl hdl) {
 	        m_connections.insert(hdl);
 

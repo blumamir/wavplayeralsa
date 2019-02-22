@@ -223,6 +223,7 @@ namespace wavplayeralsa {
 
 	void SingleFilePlayer::stop() {
 		std::cout << "stop is called on current alsa player (for the current song)." << std::endl;
+		m_statusReporter->NoSongPlayingStatus();
 		m_playStatusMutex.lock();
 		if(m_playStatus == Stopped) {
 			m_playStatusMutex.unlock();			

@@ -91,7 +91,13 @@ namespace wavplayeralsa {
 	  	m_server.config.port = m_httpListenPort;
 	  	m_server.io_service = std::shared_ptr<boost::asio::io_service>(m_io_service);
 		m_server.resource["^/current-song$"]["PUT"] = std::bind(&PlayerReqHttp::OnPutCurrentSong, this, std::placeholders::_1, std::placeholders::_2);
-	  	m_server.start();
+		try {
+	  		m_server.start();
+	  	}
+	  	catch(const std::exception &e) {
+	  		std::cout << "failed to start http server. error: " << e.what() << std::endl;
+	  		return;
+	  	}
 	}
 
 }
