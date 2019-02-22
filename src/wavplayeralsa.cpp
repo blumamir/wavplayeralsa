@@ -1,9 +1,7 @@
 
 #include "single_file_player.h"
-#include "generated/player_command.pb.h"
 #include <iostream>
 #include <sndfile.h>
-#include <cxxopts.hpp>
 
 #include <string>
 #include <iostream>
@@ -13,6 +11,8 @@
 
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
+
+#include "cxxopts/cxxopts.hpp"
 
 #include <status_reporter_ifc.hpp>
 #include <player_req_http.hpp>
