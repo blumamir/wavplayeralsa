@@ -48,8 +48,8 @@ namespace wavplayeralsa {
 
 		void Configure(boost::asio::io_service *ioSerivce, uint16_t wsListenPort) {
 
-		    m_server.set_access_channels(websocketpp::log::alevel::all);
-		    m_server.clear_access_channels(websocketpp::log::alevel::frame_payload);
+		    m_server.clear_error_channels(websocketpp::log::alevel::all);
+		    m_server.clear_access_channels(websocketpp::log::alevel::all);
 		    m_server.init_asio(ioSerivce);
 		    m_server.set_open_handler(bind(&StatusReporter::on_open,this,_1));
         	m_server.set_close_handler(bind(&StatusReporter::on_close,this,_1));

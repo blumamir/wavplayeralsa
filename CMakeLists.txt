@@ -17,4 +17,4 @@ set (SOURCES
 set(CMAKE_BUILD_TYPE Debug)
 
 add_executable (wavplayeralsa ${SOURCES})
-target_link_libraries(wavplayeralsa -lasound -lsndfile -lboost_system -pthread)
+target_link_libraries(wavplayeralsa -lasound -lsndfile -lboost_system -lboost_filesystem -pthread)
