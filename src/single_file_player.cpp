@@ -9,20 +9,44 @@
 
 namespace wavplayeralsa {
 
-	SingleFilePlayer::SingleFilePlayer() : m_shouldBePlaying(false)
+	SingleFilePlayer::SingleFilePlayer() : 
+		m_shouldBePlaying(false)
 	{}
 	
 
 	SingleFilePlayer::~SingleFilePlayer() {
 
-		if(m_alsaPlaybackHandle != NULL) {
+		stop();
+
+		if(m_alsaPlaybackHandle != nullptr) {
 			snd_pcm_close(m_alsaPlaybackHandle);
-			m_alsaPlaybackHandle = NULL;
+			m_alsaPlaybackHandle = nullptr;
 		}
 	}
 
-	const std::string &SingleFilePlayer::getFileToPlay() { 
-		return m_fileToPlay; 
+	const std::string &SingleFilePlayer::getFileId() { 
+		return m_fileId; 
+	}
+
+	void SingleFilePlayer::initialize(StatusUpdateMsg *statusReporter, const std::string &audioDevice) {
+
+		if(m_initialized) {
+			throw std::runtime_error("Initialize called on an already initialized alsa player");
+		}
+
+		m_statusReporter = statusReporter;
+
+		int err;
+		std::stringstream errDesc;
+
+		// const char *audioDevice = "plughw:0,0";
+		//const char *audioDevice = "default";
+		if( (err = snd_pcm_open(&m_alsaPlaybackHandle, audioDevice.c_str(), SND_PCM_STREAM_PLAYBACK, 0)) < 0) {
+			errDesc << "cannot open audio device " << audioDevice << " (" << snd_strerror(err) << ")";
+			throw std::runtime_error(errDesc.str());
+		}
+
+		m_initialized = true;
 	}
 
 	void SingleFilePlayer::checkSongStartTime() {
@@ -32,7 +56,13 @@ namespace wavplayeralsa {
 
 		if( (err = snd_pcm_delay(m_alsaPlaybackHandle, &delay)) < 0) {
 			std::cerr << "cannot query current offset in buffer (" << snd_strerror(err) << ")" << std::endl;
-		}		
+			return;
+		}	
+
+		// this is a majic number test to remove end of file wrong reporting
+		if(delay < 4096) {
+			return;
+		}
 		posInFrames = m_currPositionInFrames - delay; 			
 		int64_t msSinceSongStart = ((posInFrames * (int64_t)1000) / (int64_t)m_frameRate);
 
@@ -43,7 +73,7 @@ namespace wavplayeralsa {
 
 		int64_t diffFromPrev = songStartTimeMsSinceEphoc - m_songStartTimeMsSinceEphoc;
 		if(diffFromPrev > 1 || diffFromPrev < -1) {
-			m_statusReporter->NewSongStatus(m_fileToPlay, songStartTimeMsSinceEphoc, 1.0);
+			m_statusReporter->NewSongStatus(m_fileId, songStartTimeMsSinceEphoc, 1.0);
 			if(m_songStartTimeMsSinceEphoc > 0) {
 				std::cout << diffFromPrev << "\t" << std::setfill('0') << std::setw(4) << (songStartTimeMsSinceEphoc % 10000) << "\t" << 
 					std::setfill('0') << std::setw(4) << (currTimeMsSinceEpoch % 10000) << "\t" << 
@@ -58,11 +88,23 @@ namespace wavplayeralsa {
 
 	}
 
+	void SingleFilePlayer::transferFramesToPcm() {
+
+		try {
+			playLoopOnThread();
+		}
+		catch(const std::runtime_error &e) {
+			std::cerr << e.what() << std::endl;
+		}
+		std::cout << "song ended" << std::endl;
+		m_statusReporter->NoSongPlayingStatus();		
+	}
+
 	void SingleFilePlayer::playLoopOnThread() {
 
 		int err;
 
-		while(1) {
+		while(true) {
 
 			if(m_shouldBePlaying == false) {
 				std::stringstream errDesc;
@@ -73,10 +115,16 @@ namespace wavplayeralsa {
 				return;
 			}
 
-			// TODO: if err == 0 -> timeout occured. 
-			if( (err = snd_pcm_wait(m_alsaPlaybackHandle, 1000)) < 0) {
+			const int waitTimeOutMs = 5;
+			if( (err = snd_pcm_wait(m_alsaPlaybackHandle, waitTimeOutMs)) < 0) {
 				std::cerr << "pool failed (" << snd_strerror(err) << ")" << std::endl;
 				break;
+			}
+			if(err == 0) {
+				// timeout occured. means we waited waitTimeOutMs ms, and not enough frames were
+				// availible in the alsa buffers. 
+				// we will just continue, that will give us a chance to check for stop playing again
+				continue;
 			}
 
 			// calculate how many frames to write
@@ -142,10 +190,10 @@ namespace wavplayeralsa {
 				return;
 			}
 
+			checkSongStartTime();
 			std::chrono::milliseconds sleepTimeMs(5);
 			std::this_thread::sleep_for(sleepTimeMs);
 		}
-
 	}
 
 	bool SingleFilePlayer::isAlsaStatePlaying() {
@@ -154,6 +202,10 @@ namespace wavplayeralsa {
 	}
 
 	void SingleFilePlayer::startPlay(uint32_t positionInMs) {
+
+		if(!m_sndInitialized) {
+			throw std::runtime_error("the player is not initialized with a valid sound file.");
+		}
 
 		m_currPositionInFrames = (positionInMs / 1000.0) * (double)m_frameRate; 
 		if(m_currPositionInFrames > m_totalFrames) {
@@ -171,7 +223,7 @@ namespace wavplayeralsa {
 		}
 
 		m_shouldBePlaying = true;
-		m_playingThread = new std::thread(&SingleFilePlayer::playLoopOnThread, this);
+		m_playingThread = new std::thread(&SingleFilePlayer::transferFramesToPcm, this);
 	}
 
 	void SingleFilePlayer::stop() {
@@ -183,25 +235,26 @@ namespace wavplayeralsa {
 			delete m_playingThread;
 			m_playingThread = nullptr;
 		}
+		m_songStartTimeMsSinceEphoc = 0; // invalidate old start time so on next play a new status will be sent
 	}
 
-	void SingleFilePlayer::initialize(const std::string &path, const std::string &fileName, StatusUpdateMsg *statusReporter) {
+	void SingleFilePlayer::loadNewFile(const std::string &fullPath, const std::string &fileId) {
 
-		m_statusReporter = statusReporter;
-
-		std::stringstream fileDirStream;
-
-		std::string wavPath = path;
-		char * absPathCharArr = realpath(path.c_str(), NULL);
-		if(absPathCharArr != NULL) {
-			wavPath = absPathCharArr;
-			free(absPathCharArr);
+		if(!m_initialized) {
+			throw std::runtime_error("loadNewFile called but player not initilized");
 		}
-		fileDirStream << wavPath << "/" << fileName;
-		m_fileToPlay = fileName;
-		m_fullFileName = fileDirStream.str();
+
+		this->stop();
+
+		// mark snd as not initialized. after everything goes well, and no exception is thrown, it will be changed to initialized
+		m_sndInitialized = false;
+
+		m_fullFileName = fullPath;
+		m_fileId = fileId;
 		initSndFile();	
 		initAlsa();	
+
+		m_sndInitialized = true;
 	}
 
 	void SingleFilePlayer::initSndFile() {
@@ -358,13 +411,6 @@ namespace wavplayeralsa {
 		int err;
 		std::stringstream errDesc;
 
-		// const char *audioDevice = "plughw:0,0";
-		const char *audioDevice = "default";
-		if( (err = snd_pcm_open(&m_alsaPlaybackHandle, audioDevice, SND_PCM_STREAM_PLAYBACK, 0)) < 0) {
-			errDesc << "cannot open audio device " << audioDevice << " (" << snd_strerror(err) << ")";
-			throw std::runtime_error(errDesc.str());
-		}
-
 		// set hw parameters
 
 		snd_pcm_hw_params_t *hwParams;
@@ -427,11 +473,17 @@ namespace wavplayeralsa {
 			throw std::runtime_error(errDesc.str());
 		}
 
-		if( (err = snd_pcm_sw_params_set_avail_min(m_alsaPlaybackHandle, swParams, 4096)) < 0) {
+		// we transfer frames to alsa buffers, and then call snd_pcm_wait and block until buffer
+		// has more space for next frames.
+		// this parameter is the amount of min availible frames in the buffer that should trigger
+		// alsa to notify us for writing more frames.
+		if( (err = snd_pcm_sw_params_set_avail_min(m_alsaPlaybackHandle, swParams, AVAIL_MIN)) < 0) {
 			errDesc << "cannot set minimum available count (" << snd_strerror(err) << ")";
 			throw std::runtime_error(errDesc.str());
 		}	
 
+		// how many frames should be in the buffer before alsa start to play it.
+		// we set to 0 -> means start playing immediately
 		if( (err = snd_pcm_sw_params_set_start_threshold(m_alsaPlaybackHandle, swParams, 0U)) < 0) {
 			errDesc << "cannot set start mode (" << snd_strerror(err) << ")";
 			throw std::runtime_error(errDesc.str());

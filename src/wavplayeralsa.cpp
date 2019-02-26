@@ -24,13 +24,69 @@
 #include "status_update_msg.h"
 
 
-class ThreadsRouter : public wavplayeralsa::StatusUpdateMsg {
+class AlsaPlayerHandler : 
+	public wavplayeralsa::PlayerRequestIfc,
+	public wavplayeralsa::StatusUpdateMsg 
+{
 
 public:
 
-	void initialize(boost::asio::io_service *statusReporterIos, wavplayeralsa::StatusReporterIfc *statusReporter) {
-		m_statusReporterIos = statusReporterIos;
-		m_statusReporter = statusReporter;
+	AlsaPlayerHandler(boost::asio::io_service *statusReporterIos, wavplayeralsa::StatusReporterIfc *statusReporter) :
+		m_statusReporterIos(statusReporterIos), m_statusReporter(statusReporter)
+	{
+		m_player.initialize(this, "default");
+	}
+
+	void setWavDir(const std::string &wavDir) {
+		m_wavDir = boost::filesystem::path(wavDir);
+	}
+
+public:
+	bool NewSongRequest(const std::string &songName, uint64_t startOffsetMs, std::stringstream &outMsg) {
+
+		if(songName == m_player.getFileId()) {
+			outMsg << "changed position of the current song '" << songName << "'. new position in ms is: " << startOffsetMs << std::endl;
+		}
+		else {
+
+			// create the canonical full path of the file to play
+			boost::filesystem::path songPathInWavDir(songName);
+			boost::filesystem::path songFullPath = m_wavDir / songPathInWavDir;
+			std::string canonicalFullPath;
+			try {
+			 	canonicalFullPath = boost::filesystem::canonical(songFullPath).string();
+			}
+			catch (const std::exception &e) {
+				outMsg << "loading new song '" << songName << "' failed. error: " << e.what();
+				return false;
+			}
+
+			try {
+				m_player.loadNewFile(canonicalFullPath, songName);
+				outMsg << "song successfully changed to '" << songName << "'. " <<
+						"new song will start playing at position " << startOffsetMs << " ms";
+			}
+			catch(const std::runtime_error &e) {
+				outMsg << "loading new song '" << songName << "' failed. currently no song is loaded in the player and it is not playing. " <<
+					"reason for failure: " << e.what();
+				return false;
+			}
+		}
+
+		m_player.startPlay(startOffsetMs);
+		return true;
+	}
+
+	bool StopPlayRequest(std::stringstream &outMsg) {
+		try {
+			m_player.stop();
+		}
+		catch(const std::runtime_error &e) {
+			outMsg << "Unable to stop current song successfully, error: " << e.what();
+			return false;
+		}
+		outMsg << "current song '" << m_player.getFileId() << "' stopped playing";
+		return true;
 	}
 
 public:
@@ -40,81 +96,14 @@ public:
 
 	void NoSongPlayingStatus() {
 		m_statusReporterIos->post(boost::bind(&wavplayeralsa::StatusReporterIfc::NoSongPlayingStatus, m_statusReporter));		
-	}
+	}	
 
 private:
+	wavplayeralsa::SingleFilePlayer m_player;
+	boost::filesystem::path m_wavDir;
+	
 	boost::asio::io_service *m_statusReporterIos;
 	wavplayeralsa::StatusReporterIfc *m_statusReporter;
-
-};
-
-class AlsaPlayerHandler : public wavplayeralsa::PlayerRequestIfc {
-
-public:
-
-	AlsaPlayerHandler(ThreadsRouter *threadRounter) :
-		m_threadsRouter(threadRounter)
-	{
-
-	}
-
-	void setWavDir(const std::string &wavDir) {
-		m_wavDir = wavDir;
-	}
-
-public:
-	bool NewSongRequest(const std::string &songName, uint64_t startOffsetMs, std::stringstream &outMsg) {
-
-		if(m_player != NULL && songName == m_player->getFileToPlay()) {
-			outMsg << "changed position of the current song '" << songName << "'. new position in ms is: " << startOffsetMs << std::endl;
-		}
-		else {
-			// so the request asks to change the song.
-			// we will first delete the previous song, then try to load the new one.
-			// in case we fail, we will be left with no song at all which is fine
-
-			if(m_player != NULL) {
-				m_player->stop();
-				delete m_player;
-			}
-
-			m_player = new wavplayeralsa::SingleFilePlayer();
-			try {
-				m_player->initialize(m_wavDir, songName, m_threadsRouter);		
-				outMsg << "song successfully changed to '" << songName << "'. " <<
-						"new song will start playing at position " << startOffsetMs << " ms";
-			}
-			catch(const std::runtime_error &e) {
-				delete m_player;
-				m_player = NULL;
-				outMsg << "loading new song '" << songName << "' failed. currently no song is loaded in the player and it is not playing. " <<
-					"reason for failure: " << e.what();
-				return false;
-			}
-		}
-
-		if(m_player != NULL) {
-			m_player->startPlay(startOffsetMs);
-		}
-
-		return true;
-	}
-
-	bool StopPlayRequest(std::stringstream &outMsg) {
-		if(m_player != NULL) {
-			m_player->stop();
-			outMsg << "current song '" << m_player->getFileToPlay() << "' stopped playing";
-		}
-		else {
-			outMsg << "asked to stop song, and there is no song currently playing";
-		}
-		return true;
-	}
-
-private:
-	wavplayeralsa::SingleFilePlayer *m_player = NULL;
-	ThreadsRouter *m_threadsRouter;
-	std::string m_wavDir;
 
 };
 
@@ -228,10 +217,7 @@ int main(int argc, char *argv[]) {
 	boost::asio::io_service io_service;
 	boost::asio::io_service::work work(io_service);
 
-	ThreadsRouter threadsRouter;
-	threadsRouter.initialize(&io_service, statusReporter);
-
-	AlsaPlayerHandler alsaPlayerHandler(&threadsRouter);
+	AlsaPlayerHandler alsaPlayerHandler(&io_service, statusReporter);
 
 	uint16_t statusReporterPort = 9002;
 	uint16_t httpInterfacePort = 80;

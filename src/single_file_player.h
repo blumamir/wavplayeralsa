@@ -76,8 +76,15 @@ namespace wavplayeralsa {
 		SingleFilePlayer();
 		~SingleFilePlayer();
 
-		const std::string &getFileToPlay();
-		void initialize(const std::string &path, const std::string &fileName, StatusUpdateMsg *statusReporter);
+		// can throw exception
+		void initialize(StatusUpdateMsg *statusReporter, const std::string &audioDevice);
+
+		// file id is a string identifier that is used to refer to the file being played.
+		// it is something like: beep.wav or beatles/let_it_be.wav
+		// what should *NOT* be used as fileId is: ../../songs/beep.wav songs//beep.wav ./beep.wav
+		// it should be canonical, so that each file is always identify uniquely
+		const std::string &getFileId();
+		void loadNewFile(const std::string &fullPath, const std::string &fileId);
 		void startPlay(uint32_t positionInMs);
 		void stop();
 
@@ -88,12 +95,16 @@ namespace wavplayeralsa {
 		void checkSongStartTime();
 
 	private:
+		void transferFramesToPcm();
 		void playLoopOnThread();
 
+	private:
+		bool m_initialized = false;
+		bool m_sndInitialized = false; // sound file is loaded successfully, and alsa is configured to support it
 
 	private:
 
-		std::string m_fileToPlay;
+		std::string m_fileId;
 		std::string m_fullFileName;
 
 	private:
@@ -128,12 +139,12 @@ namespace wavplayeralsa {
 		uint64_t m_currPositionInFrames = 0;
 
 	private:
-		std::thread *m_playingThread = NULL;
+		std::thread *m_playingThread = nullptr;
 		std::atomic_bool m_shouldBePlaying; // used to cancel the playing thread
 
 	private:
 		uint64_t m_songStartTimeMsSinceEphoc = 0;
-		StatusUpdateMsg *m_statusReporter = NULL;
+		StatusUpdateMsg *m_statusReporter = nullptr;
 
 
 	};
