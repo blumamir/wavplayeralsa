@@ -1,6 +1,5 @@
 #include "single_file_player.h"
 
-#include <sndfile.hh>
 #include <alsa/asoundlib.h>
 #include <iostream>
 #include <iomanip>
@@ -10,12 +9,11 @@
 
 namespace wavplayeralsa {
 
-	SingleFilePlayer::~SingleFilePlayer() {
+	SingleFilePlayer::SingleFilePlayer() : m_shouldBePlaying(false)
+	{}
+	
 
-		if(m_rawDataBuffer != NULL) {
-			delete[] m_rawDataBuffer;
-			m_rawDataBuffer = NULL;
-		}
+	SingleFilePlayer::~SingleFilePlayer() {
 
 		if(m_alsaPlaybackHandle != NULL) {
 			snd_pcm_close(m_alsaPlaybackHandle);
@@ -32,14 +30,10 @@ namespace wavplayeralsa {
 		snd_pcm_sframes_t delay = 0;
 		int64_t posInFrames = 0;
 
- 		// m_currPositionMutex.lock();
- 		{
- 			if( (err = snd_pcm_delay(m_alsaPlaybackHandle, &delay)) < 0) {
- 				std::cerr << "cannot query current offset in buffer (" << snd_strerror(err) << ")" << std::endl;
- 			}		
- 			posInFrames = m_currPositionInFrames - delay; 			
- 		}
-		// m_currPositionMutex.unlock();
+		if( (err = snd_pcm_delay(m_alsaPlaybackHandle, &delay)) < 0) {
+			std::cerr << "cannot query current offset in buffer (" << snd_strerror(err) << ")" << std::endl;
+		}		
+		posInFrames = m_currPositionInFrames - delay; 			
 		int64_t msSinceSongStart = ((posInFrames * (int64_t)1000) / (int64_t)m_frameRate);
 
 		struct timeval tv;
@@ -70,13 +64,16 @@ namespace wavplayeralsa {
 
 		while(1) {
 
-			m_playStatusMutex.lock();
-			if(m_playStatus != Playing) {
-				m_playStatusMutex.unlock();
-				break;
+			if(m_shouldBePlaying == false) {
+				std::stringstream errDesc;
+				if( (err = snd_pcm_drop(m_alsaPlaybackHandle)) < 0 ) {
+					errDesc << "snd_pcm_drop failed (" << snd_strerror(err) << ")";
+					throw std::runtime_error(errDesc.str());
+				}
+				return;
 			}
-			m_playStatusMutex.unlock();
 
+			// TODO: if err == 0 -> timeout occured. 
 			if( (err = snd_pcm_wait(m_alsaPlaybackHandle, 1000)) < 0) {
 				std::cerr << "pool failed (" << snd_strerror(err) << ")" << std::endl;
 				break;
@@ -95,38 +92,36 @@ namespace wavplayeralsa {
 				}
 			}
 
-			// it's more efficient when the following line is commented out (e.g - don't truncate the amount of frames).
-			// I leave the original line here because it might be useful one day (the original example code had this line)
-			// framesToDeliver = framesToDeliver > 4096 ? 4096 : framesToDeliver;
+			// we want to deliver as many frames as possible.
+			// we can put framesToDeliver number of frames, but the buffer can only hold m_framesCapacityInBuffer frames
+			framesToDeliver = framesToDeliver > m_framesCapacityInBuffer ? m_framesCapacityInBuffer : framesToDeliver;
+			unsigned int bytesToDeliver = framesToDeliver * m_bytesPerFrame;
 
-			// check that we do not exceed the frames that we acctually have
-			int64_t remainingFrames = 	m_totalFrames - m_currPositionInFrames;
-			if(remainingFrames <= 0) {
-				std::cout << "done writing frames to pcm" << std::endl;
+			// read the frames from the file. TODO: what if readRaw fails?
+			char bufferForTransfer[TRANSFER_BUFFER_SIZE];
+			bytesToDeliver = m_sndFile.readRaw(bufferForTransfer, bytesToDeliver);
+			if(bytesToDeliver < 0) {
+				std::cerr << "Failed reading raw frames from snd file. returned: " << bytesToDeliver << std::endl;
+				continue;
+			}
+			if(bytesToDeliver == 0) {
+				std::cout << "Done transfering snd frames to pcm." << std::endl;
 				break;
 			}
-			if(remainingFrames < framesToDeliver) {
-				framesToDeliver = remainingFrames;
-			}
 
-			// write the frames to the buffer and update m_currPositionInFrames variable
-			// m_currPositionMutex.lock();
-			{
-				unsigned int offset = m_currPositionInFrames * m_channels * m_sampleChannelSizeBytes;
-				int framesWritten = snd_pcm_writei(m_alsaPlaybackHandle, m_rawDataBuffer + offset, framesToDeliver);
-				if( framesWritten < 0) {
-					std::cerr << "write failed (" << snd_strerror(framesWritten) << ")" << std::endl;
+			int framesWritten = snd_pcm_writei(m_alsaPlaybackHandle, bufferForTransfer, framesToDeliver);
+			if( framesWritten < 0) {
+				std::cerr << "write failed (" << snd_strerror(framesWritten) << ")" << std::endl;
+			}
+			else {
+				m_currPositionInFrames += framesWritten;
+				if(framesWritten != framesToDeliver) {
+					std::cerr << "transfered to alsa less frame then requested. framesToDeliver:" << framesToDeliver << " framesWritten: " << framesWritten << std::endl;
+					m_sndFile.seek(m_currPositionInFrames, SEEK_SET);
 				}
-				m_currPositionInFrames += framesWritten;				
 			}
-			// m_currPositionMutex.unlock();
 
-			static int loopIndex = 0;
-			if(loopIndex % 1 == 0)
-			{
-				checkSongStartTime();
-			}
-			loopIndex++;
+			checkSongStartTime();
 		}
 
 		// we will be out of the loop if we finished writing frames to pcm.
@@ -134,66 +129,23 @@ namespace wavplayeralsa {
 
 		while(true) {
 
-			m_playStatusMutex.lock();
-			if(!isAlsaStatePlaying()) {
-				m_playStatus = Stopping;
-			}
-
-			if(m_playStatus != Playing) {
-				// clear the content of the buffer
+			bool isCurrentlyPlaying = isAlsaStatePlaying();
+			if(!isCurrentlyPlaying) {
 				std::cout << "done playing current song. reached end of buffer and pcm is empty" << std::endl;
-				int err;
+			}
+			if(!isCurrentlyPlaying || m_shouldBePlaying == false) {
 				std::stringstream errDesc;
 				if( (err = snd_pcm_drop(m_alsaPlaybackHandle)) < 0 ) {
 					errDesc << "snd_pcm_drop failed (" << snd_strerror(err) << ")";
-					m_playStatusMutex.unlock();
 					throw std::runtime_error(errDesc.str());
 				}
-				m_playStatus = Stopped;
-				m_playStatusMutex.unlock();
-				return;				
+				return;
 			}
-			m_playStatusMutex.unlock();
 
-			std::chrono::milliseconds sleepTimeMs(100);
+			std::chrono::milliseconds sleepTimeMs(5);
 			std::this_thread::sleep_for(sleepTimeMs);
 		}
 
-	}
-
-	uint32_t SingleFilePlayer::getPositionInMs() {
-		return 0;
-		// int err;
-	 // 	snd_pcm_sframes_t delay = 0;
-	 // 	uint64_t posInFrames;
-
-	 // 	m_playStatusMutex.lock();
-	 // 	if(m_playStatus != Playing) {
-	 // 		m_playStatusMutex.unlock();
-	 // 		return -1;
-	 // 	}
-	 // 	m_playStatusMutex.unlock();
-
-
- 	// 	m_currPositionMutex.lock();
- 	// 	{
- 	// 		if( (err = snd_pcm_delay(m_alsaPlaybackHandle, &delay)) < 0) {
- 	// 			std::cerr << "cannot query current offset in buffer (" << snd_strerror(err) << ")" << std::endl;
- 	// 		}		
- 	// 		posInFrames = m_currPositionInFrames - delay; 			
- 	// 	}
-		// m_currPositionMutex.unlock();
-
-		// return (uint32_t)((posInFrames * (uint64_t)1000) / (uint64_t)m_frameRate);
-	}
-
-	// can be called from other thread
-	bool SingleFilePlayer::isPlaying() {
-		bool retValue;
-		m_playStatusMutex.lock();
-		retValue = (m_playStatus == Playing);
-		m_playStatusMutex.unlock();
-		return retValue;		
 	}
 
 	bool SingleFilePlayer::isAlsaStatePlaying() {
@@ -207,6 +159,7 @@ namespace wavplayeralsa {
 		if(m_currPositionInFrames > m_totalFrames) {
 			m_currPositionInFrames = m_totalFrames;
 		}
+		m_sndFile.seek(m_currPositionInFrames, SEEK_SET);
 
 		stop();
 
@@ -217,24 +170,19 @@ namespace wavplayeralsa {
 			throw std::runtime_error(errDesc.str());
 		}
 
-		m_playStatus = PlayStatus::Playing;
+		m_shouldBePlaying = true;
 		m_playingThread = new std::thread(&SingleFilePlayer::playLoopOnThread, this);
 	}
 
 	void SingleFilePlayer::stop() {
 		std::cout << "stop is called on current alsa player (for the current song)." << std::endl;
 		m_statusReporter->NoSongPlayingStatus();
-		m_playStatusMutex.lock();
-		if(m_playStatus == Stopped) {
-			m_playStatusMutex.unlock();			
-			return;
+		m_shouldBePlaying = false;
+		if(m_playingThread != nullptr) {
+			m_playingThread->join();
+			delete m_playingThread;
+			m_playingThread = nullptr;
 		}
-		m_playStatus = Stopping;
-		m_playStatusMutex.unlock();
-
-		m_playingThread->join();
-		delete m_playingThread;
-		m_playingThread = nullptr;
 	}
 
 	void SingleFilePlayer::initialize(const std::string &path, const std::string &fileName, StatusUpdateMsg *statusReporter) {
@@ -257,25 +205,26 @@ namespace wavplayeralsa {
 	}
 
 	void SingleFilePlayer::initSndFile() {
-		SndfileHandle sndFile = SndfileHandle(m_fullFileName);
-		if(sndFile.error() != 0) {
+
+		m_sndFile = SndfileHandle(m_fullFileName);
+		if(m_sndFile.error() != 0) {
 			std::stringstream errorDesc;
-			errorDesc << "The file '" << m_fullFileName << "' cannot be opened. error msg: '" << sndFile.strError() << "'";
+			errorDesc << "The file '" << m_fullFileName << "' cannot be opened. error msg: '" << m_sndFile.strError() << "'";
 			throw std::runtime_error(errorDesc.str());
 		}
 
 		// set the parameters from read from the SndFile and produce log messages
 
 		// sample rate
-		m_frameRate = sndFile.samplerate();
+		m_frameRate = m_sndFile.samplerate();
 		std::cout << "Frame rate (samples per seconds) is: " << m_frameRate << std::endl;
 
 		// channels
-		m_channels = sndFile.channels();
+		m_channels = m_sndFile.channels();
 		std::cout << "Number of channels in each sample is: " << m_channels << std::endl;
 
-		int majorType = sndFile.format() & SF_FORMAT_TYPEMASK;
-		int minorType = sndFile.format() & SF_FORMAT_SUBMASK;
+		int majorType = m_sndFile.format() & SF_FORMAT_TYPEMASK;
+		int minorType = m_sndFile.format() & SF_FORMAT_SUBMASK;
 		std::cout << "wav format. major: 0x" << std::hex << majorType << " minor: 0x" << std::hex << minorType << std::dec << std::endl;
 
 		switch(minorType) {
@@ -330,14 +279,13 @@ namespace wavplayeralsa {
 		}
 		std::cout << " in " << (m_isEndianLittle ? "little" : "big") << " endian format" << std::endl;
 
-		m_totalFrames = sndFile.frames();
+		m_totalFrames = m_sndFile.frames();
 		std::cout << "total frames in file: " << m_totalFrames << " and total time in ms is: " << (m_totalFrames * 1000) / m_frameRate << std::endl;
 
-		uint64_t bufferSize = m_totalFrames * (uint64_t)m_channels * (uint64_t)m_sampleChannelSizeBytes;
-		m_rawDataBuffer = new char[bufferSize];
-		sndFile.readRaw(m_rawDataBuffer, bufferSize);
+		m_bytesPerFrame = m_channels * m_sampleChannelSizeBytes;
+		m_framesCapacityInBuffer = TRANSFER_BUFFER_SIZE / m_bytesPerFrame;
 
-		m_sndFileInitialized = true;
+		uint64_t bufferSize = m_totalFrames * (uint64_t)m_channels * (uint64_t)m_sampleChannelSizeBytes;
 	}
 
 	bool SingleFilePlayer::GetFormatForAlsa(snd_pcm_format_t &outFormat) {
@@ -501,8 +449,6 @@ namespace wavplayeralsa {
 			errDesc << "cannot prepare audio interface for use (" << snd_strerror(err) << ")";
 			throw std::runtime_error(errDesc.str());
 		}	
-
-		m_alsaInitialized = true;
 
 	}
 
