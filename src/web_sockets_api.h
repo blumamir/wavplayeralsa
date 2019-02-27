@@ -17,7 +17,7 @@ namespace wavplayeralsa {
 	class WebSocketsApi : public PlayerEventsIfc {
 
 	public:
-		void Configure(boost::asio::io_service *ioSerivce, uint16_t wsListenPort);
+		void Initialize(boost::asio::io_service *ioSerivce, uint16_t wsListenPort);
 
 	public:
 		// PlayerEventsIfc

@@ -13,7 +13,7 @@ namespace wavplayeralsa {
 
 	}
 
-	void HttpApi::Initialize(uint16_t httpListenPort, boost::asio::io_service *io_service, PlayerActionsIfc *playerReqCallback) {
+	void HttpApi::Initialize(boost::asio::io_service *io_service, PlayerActionsIfc *playerReqCallback, uint16_t httpListenPort) {
 
 		// set class members
 		m_httpListenPort = httpListenPort;
@@ -93,12 +93,14 @@ namespace wavplayeralsa {
 	  	m_server.config.port = m_httpListenPort;
 	  	m_server.io_service = std::shared_ptr<boost::asio::io_service>(m_io_service);
 		m_server.resource["^/current-song$"]["PUT"] = std::bind(&HttpApi::OnPutCurrentSong, this, std::placeholders::_1, std::placeholders::_2);
+
 		try {
 	  		m_server.start();
 	  	}
 	  	catch(const std::exception &e) {
-	  		std::cout << "failed to start http server. error: " << e.what() << std::endl;
-	  		return;
+	  		std::stringstream err_msg;
+	    	err_msg << "http server 'start' on port " << m_httpListenPort << " failed, probably not able to bind to port. error msg: " << e.what();
+	    	throw std::runtime_error(err_msg.str());
 	  	}
 	}
 

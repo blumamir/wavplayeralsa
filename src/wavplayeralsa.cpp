@@ -29,14 +29,12 @@ class AlsaPlayerHandler :
 
 public:
 
-	AlsaPlayerHandler(boost::asio::io_service *statusReporterIos, wavplayeralsa::WebSocketsApi *statusReporter) :
-		m_statusReporterIos(statusReporterIos), m_statusReporter(statusReporter)
-	{
-		m_player.Initialize(this, "default");
-	}
-
-	void setWavDir(const std::string &wavDir) {
+	void Initialize(boost::asio::io_service *statusReporterIos, wavplayeralsa::WebSocketsApi *statusReporter, const std::string &wavDir) {
 		m_wavDir = boost::filesystem::path(wavDir);
+		m_statusReporterIos = statusReporterIos;
+		m_statusReporter = statusReporter;
+
+		m_player.Initialize(this, "default");
 	}
 
 public:
@@ -113,36 +111,119 @@ class WavPlayerAlsa {
 
 public:
 
+	WavPlayerAlsa() :
+		io_service_work_(io_service_)
+	{
+
+	}
+
+	void CommandLineArguments(int argc, char *argv[]) {
+		// current directory
+		char cwdCharArr[PATH_MAX];
+		getcwd(cwdCharArr, sizeof(cwdCharArr));
+
+
+		cxxopts::Options options("wavplayeralsa", "wav files player with accurate position in audio tracking.");
+		options.add_options()
+			("f,initial_file", "file which will be played on run", cxxopts::value<std::string>())
+			("d,wav_dir", "the directory in which wav files are located", cxxopts::value<std::string>()->default_value(cwdCharArr))
+			("ws_listen_port", "port on which player listen for websocket clients, to send internal event updates", cxxopts::value<uint16_t>()->default_value("9002"))
+			("http_listen_port", "port on which player listen for http clients, to receive external commands and send state", cxxopts::value<uint16_t>()->default_value("8080"))
+			("log_dir", "directory for log file (directory must exist, will not be created)", cxxopts::value<std::string>())
+			("h, help", "print help")
+			;
+
+		try {
+
+			auto cmd_line_parameters = options.parse(argc, argv);
+
+			if(cmd_line_parameters.count("help")) {
+			 	std::cout << options.help({""}) << std::endl;
+			 	exit(EXIT_SUCCESS);
+			}
+
+			// parse options
+			save_logs_to_file_ = (cmd_line_parameters.count("log_dir") > 0);
+			if(save_logs_to_file_) {
+				log_dir_ = cmd_line_parameters["log_dir"].as<std::string>();
+			}
+			if(cmd_line_parameters.count("initial_file") > 0) {
+		 		initial_file_ = cmd_line_parameters["initial_file"].as<std::string>();
+			}
+			ws_listen_port_ = cmd_line_parameters["ws_listen_port"].as<uint16_t>();
+			http_listen_port_ = cmd_line_parameters["http_listen_port"].as<uint16_t>();
+			wav_dir_ = cmd_line_parameters["wav_dir"].as<std::string>();
+
+		}
+		catch(const cxxopts::OptionException &e) {
+			std::cerr << "Invalid command line options: '" << e.what() << "'" << std::endl;
+			exit(EXIT_FAILURE);
+		}
+		catch(const std::runtime_error &e) {
+			std::cerr << "general error: '" << e.what() << "'" << std::endl;
+			exit(EXIT_FAILURE);
+		}
+
+	}
+
 	// create an initialize all the required loggers.
 	// we do not want to work without loggers.
 	// if the function is unable to create a logger, it will print to stderr, and terminate the application
-	void createLoggers(const char *commandName, bool saveLogsToFile, const std::string &logDir) {
+	void CreateLoggers(const char *command_name) {
 
 		try {
 
 			// create two logger sinks
 			std::vector<spdlog::sink_ptr> sinks;
 			sinks.push_back(createLoggerConsole());
-			if(saveLogsToFile) {
-				sinks.push_back(createLoggerFileSink(commandName, logDir));
+			if(save_logs_to_file_) {
+				sinks.push_back(createLoggerFileSink(command_name, log_dir_));
 			}
 
-			spdlog::logger logger("root", sinks.begin(), sinks.end());
-			logger.info("hello wavplayeralsa. logger initialized");
-			if(saveLogsToFile) {
-				logger.info("log file for this run is: '{}'", m_logFilePath);
-				logger.info("canonical location of log file: '{}'", m_logFileCanonicalPath);
+			root_logger_ = std::make_shared<spdlog::logger>("root", sinks.begin(), sinks.end());
+			root_logger_->info("hello wavplayeralsa. logger initialized");
+			if(save_logs_to_file_) {
+				root_logger_->info("log file for this run is: '{}'", m_logFilePath);
+				root_logger_->info("canonical location of log file: '{}'", m_logFileCanonicalPath);
 			}
-			logger.info("pid of player: {}", getpid());
+			root_logger_->info("pid of player: {}", getpid());
 
-			std::shared_ptr<spdlog::logger> alsaLogger = logger.clone("alsa");
-			alsaLogger->info("loggers initialized");			
+			// std::shared_ptr<spdlog::logger> alsaLogger = root_logger_->clone("alsa");
+			// alsaLogger->info("loggers initialized");			
 		}
 		catch(const std::exception &e) {
 			std::cerr << "Unable to create loggers. error is: " << e.what() << std::endl;
 			exit(EXIT_FAILURE);
 		}
 	}
+
+	// can throw exception
+	void InitializeComponents() {
+		try {
+			web_sockets_api_.Initialize(&io_service_, ws_listen_port_);
+			http_api_.Initialize(&io_service_, &alsa_player_handler, http_listen_port_);
+			alsa_player_handler.Initialize(&io_service_, &web_sockets_api_, wav_dir_);			
+		}
+		catch(const std::exception &e) {
+			root_logger_->critical("failed initialization, unable to start player. {}", e.what());
+			exit(EXIT_FAILURE);			
+		}
+	}
+
+	void Start() {
+
+		if(!initial_file_.empty()) {	
+		 	std::stringstream initial_file_play_status;
+			bool success = alsa_player_handler.NewSongRequest(initial_file_, 0, initial_file_play_status);
+			if(!success) {
+				root_logger_->error("unable to play initial file. {}", initial_file_play_status.str());
+				exit(EXIT_FAILURE);
+			}
+		}	
+
+		io_service_.run();
+	}
+
 
 private:
 
@@ -188,91 +269,42 @@ private:
 	std::string m_logFilePath; // might be ralative path, or contain ugly things like /// . .. etc
 	std::string m_logFileCanonicalPath; // an absolute path that has no dot, dot-dot elements or symbolic links in its generic format representation
 
+private:
+	// app infra
+	boost::asio::io_service io_service_;
+	boost::asio::io_service::work io_service_work_;
+
+private:
+	// command line arguments
+	bool save_logs_to_file_;
+	std::string log_dir_;
+	std::string initial_file_;
+	uint16_t ws_listen_port_;
+	uint16_t http_listen_port_;
+	std::string wav_dir_;
+
+private:
+	// loggers
+	std::shared_ptr<spdlog::logger> root_logger_;
+
+
+private:
+	// app components
+	wavplayeralsa::WebSocketsApi web_sockets_api_;
+	wavplayeralsa::HttpApi http_api_;
+	AlsaPlayerHandler alsa_player_handler;
 
 };
 
 
 int main(int argc, char *argv[]) {
 
-	// current directory
-	char cwdCharArr[PATH_MAX];
-	getcwd(cwdCharArr, sizeof(cwdCharArr));
+	WavPlayerAlsa wav_player_alsa;
+	wav_player_alsa.CommandLineArguments(argc, argv);
+	wav_player_alsa.CreateLoggers(argv[0]);
+	wav_player_alsa.InitializeComponents();
+	wav_player_alsa.Start();
 
-	wavplayeralsa::WebSocketsApi statusReporter;
-	wavplayeralsa::HttpApi playerReqHttp;
-
-
-	cxxopts::Options options("wavplayeralsa", "wav files player with accurate position in audio tracking.");
-	options.add_options()
-		("f,initial_file", "file which will be played on run", cxxopts::value<std::string>())
-		("d,wav_dir", "the directory in which wav files are located", cxxopts::value<std::string>()->default_value(cwdCharArr))
-		("status_report_port", "port on which player opens websocket for status updates to clients", cxxopts::value<uint16_t>()->default_value("9002"))
-		("http_interface_port", "port on which player listen for http interface (requests and status)", cxxopts::value<uint16_t>()->default_value("80"))
-		("log_dir", "directory for log file (directory must exist, will not be created)", cxxopts::value<std::string>())
-		("h, help", "print help")
-		;
-
-	boost::asio::io_service io_service;
-	boost::asio::io_service::work work(io_service);
-
-	AlsaPlayerHandler alsaPlayerHandler(&io_service, &statusReporter);
-
-	uint16_t statusReporterPort = 9002;
-	uint16_t httpInterfacePort = 80;
-	std::string initialFile;
-	bool saveLogsToFile = false;
-	std::string logDir;
-
-	try {
-
-		 auto optsresult = options.parse(argc, argv);
-
-		 if(optsresult.count("help")) {
-		 	std::cout << options.help({""}) << std::endl;
-		 	return 0;
-		 }
-
-		 // status reporter stuff
-		 statusReporterPort = optsresult["status_report_port"].as<uint16_t>();
-		 httpInterfacePort = optsresult["http_interface_port"].as<uint16_t>();
-
-		 // player stuff
-		 alsaPlayerHandler.setWavDir(optsresult["wav_dir"].as<std::string>());
-		 if(optsresult.count("initial_file")) {
-		 	initialFile = optsresult["initial_file"].as<std::string>();
-		 }
-
-		 //logger
-		 if(optsresult.count("log_dir")) {
-		 	logDir = optsresult["log_dir"].as<std::string>();
-		 	saveLogsToFile = true;
-		 }
-
-	}
-	catch(const cxxopts::OptionException &e) {
-		std::cout << "Invalid command line options: '" << e.what() << "'" << std::endl;
-		return -1;
-	}
-	catch(const std::runtime_error &e) {
-		std::cout << "general error: '" << e.what() << "'" << std::endl;
-		return -1;
-	}
-
-	WavPlayerAlsa wavPlayerAlsa;
-	wavPlayerAlsa.createLoggers(argv[0], saveLogsToFile, logDir);
-
-
-	statusReporter.Configure(&io_service, statusReporterPort);
-	playerReqHttp.Initialize(httpInterfacePort, &io_service, &alsaPlayerHandler);
-
-
-	if(!initialFile.empty()) {
-		std::stringstream initialFilePlayStatus;
-		bool success = alsaPlayerHandler.NewSongRequest(initialFile, 0, initialFilePlayStatus);
-	}
-
-	io_service.run();
-	
 	return 0;
 }
 

@@ -13,14 +13,21 @@ using json = nlohmann::json;
 namespace wavplayeralsa {
 
 
-	void WebSocketsApi::Configure(boost::asio::io_service *ioSerivce, uint16_t wsListenPort) {
+	void WebSocketsApi::Initialize(boost::asio::io_service *ioSerivce, uint16_t wsListenPort) {
 
 	    m_server.clear_error_channels(websocketpp::log::alevel::all);
 	    m_server.clear_access_channels(websocketpp::log::alevel::all);
 	    m_server.init_asio(ioSerivce);
 	    m_server.set_open_handler(bind(&WebSocketsApi::OnOpen,this, _1));
     	m_server.set_close_handler(bind(&WebSocketsApi::OnClose,this, _1));
-	    m_server.listen(wsListenPort);
+    	try {
+	    	m_server.listen(wsListenPort);
+	    }
+	    catch(const websocketpp::exception & e) {
+	    	std::stringstream err_msg;
+	    	err_msg << "web socket server listen on port " << wsListenPort << " failed, probably not able to bind to port. error msg: " << e.what();
+	    	throw std::runtime_error(err_msg.str());
+	    }
 	    m_server.start_accept();
 
 	}
@@ -44,11 +51,8 @@ namespace wavplayeralsa {
 		std::string msgJsonStr = msgJson.dump();
 
 		// Test for msg duplication.
-		// I do not want to assume something about the clients and how they generate
-		// the status messsages, and it is not expensive to do the test.
-		// Since the keys order in json message is undefinded, the same logical message can 
-		// still produce different string representations (maybe? depends on the library),
-		// but that is OK for the use here.
+		// this is just optimization, and may not cover all cases (json keys are not ordered),
+		// but its cheap and easy to test.
 		if(msgJsonStr == m_lastStatusMsg) {
 			return;
 		}

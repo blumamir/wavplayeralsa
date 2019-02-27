@@ -21,7 +21,7 @@ namespace wavplayeralsa {
 	public:
 		HttpApi();
 
-		void Initialize(uint16_t httpListenPort, boost::asio::io_service *io_service, PlayerActionsIfc *playerReqCallback);
+		void Initialize(boost::asio::io_service *io_service, PlayerActionsIfc *playerReqCallback, uint16_t httpListenPort);
 
 	private:
 		void InitializeHttpServer();
