@@ -38,56 +38,56 @@ public:
 	}
 
 public:
-	bool NewSongRequest(const std::string &songName, uint64_t startOffsetMs, std::stringstream &outMsg) {
+	bool NewSongRequest(const std::string &file_id, uint64_t start_offset_ms, std::stringstream &out_msg) {
 
-		if(songName == m_player.GetFileId()) {
-			outMsg << "changed position of the current song '" << songName << "'. new position in ms is: " << startOffsetMs << std::endl;
+		if(file_id == m_player.GetFileId()) {
+			out_msg << "changed position of the current file '" << file_id << "'. new position in ms is: " << start_offset_ms << std::endl;
 		}
 		else {
 
 			// create the canonical full path of the file to play
-			boost::filesystem::path songPathInWavDir(songName);
+			boost::filesystem::path songPathInWavDir(file_id);
 			boost::filesystem::path songFullPath = m_wavDir / songPathInWavDir;
 			std::string canonicalFullPath;
 			try {
 			 	canonicalFullPath = boost::filesystem::canonical(songFullPath).string();
 			}
 			catch (const std::exception &e) {
-				outMsg << "loading new song '" << songName << "' failed. error: " << e.what();
+				out_msg << "loading new audio file '" << file_id << "' failed. error: " << e.what();
 				return false;
 			}
 
 			try {
-				m_player.LoadNewFile(canonicalFullPath, songName);
-				outMsg << "song successfully changed to '" << songName << "'. " <<
-						"new song will start playing at position " << startOffsetMs << " ms";
+				m_player.LoadNewFile(canonicalFullPath, file_id);
+				out_msg << "song successfully changed to '" << file_id << "'. " <<
+						"new audio file will start playing at position " << start_offset_ms << " ms";
 			}
 			catch(const std::runtime_error &e) {
-				outMsg << "loading new song '" << songName << "' failed. currently no song is loaded in the player and it is not playing. " <<
+				out_msg << "loading new audio file '" << file_id << "' failed. currently no audio file is loaded in the player and it is not playing. " <<
 					"reason for failure: " << e.what();
 				return false;
 			}
 		}
 
-		m_player.StartPlay(startOffsetMs);
+		m_player.StartPlay(start_offset_ms);
 		return true;
 	}
 
-	bool StopPlayRequest(std::stringstream &outMsg) {
+	bool StopPlayRequest(std::stringstream &out_msg) {
 		try {
 			m_player.Stop();
 		}
 		catch(const std::runtime_error &e) {
-			outMsg << "Unable to stop current song successfully, error: " << e.what();
+			out_msg << "Unable to stop current song successfully, error: " << e.what();
 			return false;
 		}
-		outMsg << "current song '" << m_player.GetFileId() << "' stopped playing";
+		out_msg << "current song '" << m_player.GetFileId() << "' stopped playing";
 		return true;
 	}
 
 public:
-	void NewSongStatus(const std::string &songName, uint64_t startTimeMs, double speed) {
-		m_statusReporterIos->post(boost::bind(&wavplayeralsa::WebSocketsApi::NewSongStatus, m_statusReporter, songName, startTimeMs, speed));
+	void NewSongStatus(const std::string &file_id, uint64_t start_time_millis_since_epoch, double speed) {
+		m_statusReporterIos->post(boost::bind(&wavplayeralsa::WebSocketsApi::NewSongStatus, m_statusReporter, file_id, start_time_millis_since_epoch, speed));
 	}
 
 	void NoSongPlayingStatus() {
@@ -189,6 +189,7 @@ public:
 			root_logger_->info("pid of player: {}", getpid());
 
 			http_api_logger_ = root_logger_->clone("http_api");
+			ws_api_logger_ = root_logger_->clone("ws_api");
 		}
 		catch(const std::exception &e) {
 			std::cerr << "Unable to create loggers. error is: " << e.what() << std::endl;
@@ -199,7 +200,7 @@ public:
 	// can throw exception
 	void InitializeComponents() {
 		try {
-			web_sockets_api_.Initialize(&io_service_, ws_listen_port_);
+			web_sockets_api_.Initialize(ws_api_logger_, &io_service_, ws_listen_port_);
 			http_api_.Initialize(http_api_logger_, &io_service_, &alsa_player_handler, http_listen_port_);
 			alsa_player_handler.Initialize(&io_service_, &web_sockets_api_, wav_dir_);			
 		}
@@ -286,6 +287,7 @@ private:
 	// loggers
 	std::shared_ptr<spdlog::logger> root_logger_;
 	std::shared_ptr<spdlog::logger> http_api_logger_;
+	std::shared_ptr<spdlog::logger> ws_api_logger_;
 
 
 private:

@@ -1,7 +1,7 @@
 
 #include "http_api.h"
 
-#include <nlohmann/json.hpp>
+#include "nlohmann/json.hpp"
 
 
 using json = nlohmann::json;
@@ -35,7 +35,7 @@ namespace wavplayeralsa {
 	{
 		std::string err_msg = err_stream.str();
 		*response << "HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\nContent-Length: " << err_msg.size() << "\r\n\r\n" << err_msg;		
-	  	logger_->info("http request failed. returning error string: {}", err_msg);
+	  	logger_->error("http request failed. returning error string: {}", err_msg);
 	}
 
 	void HttpApi::OnPutCurrentSong(std::shared_ptr<HttpServer::Response> response, std::shared_ptr<HttpServer::Request> request) {
@@ -55,14 +55,14 @@ namespace wavplayeralsa {
 		}
 
 		// validate song name
-		std::string song_name;
-		if(j.find("song_name") != j.end()) {
+		std::string file_id;
+		if(j.find("file_id") != j.end()) {
 			try {
-				song_name = j["song_name"].get<std::string>();
+				file_id = j["file_id"].get<std::string>();
 			}
 			catch(json::exception &e) {
 				std::stringstream err_stream;
-				err_stream << "cannot find valid value for 'song_name' in request json. error msg: '" << e.what() << "'";
+				err_stream << "cannot find valid value for 'file_id' in request json. error msg: '" << e.what() << "'";
 				WriteResponseBadRequest(response, err_stream);
 			    return;
 			}
@@ -84,11 +84,11 @@ namespace wavplayeralsa {
 
 		std::stringstream handler_msg;
 		bool success;
-		if(song_name.empty()) {
+		if(file_id.empty()) {
 			success = player_action_callback_->StopPlayRequest(handler_msg);
 		}
 		else {
-			success = player_action_callback_->NewSongRequest(song_name, start_offset_ms, handler_msg);	
+			success = player_action_callback_->NewSongRequest(file_id, start_offset_ms, handler_msg);	
 		} 
 
 		if(!success) {

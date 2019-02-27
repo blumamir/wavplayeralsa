@@ -5,9 +5,10 @@
 #include <set>
 
 #include <boost/asio.hpp>
-#include <nlohmann/json.hpp>
-#include <websocketpp/config/asio_no_tls.hpp>
-#include <websocketpp/server.hpp>
+#include "nlohmann/json.hpp"
+#include "websocketpp/config/asio_no_tls.hpp"
+#include "websocketpp/server.hpp"
+#include "spdlog/spdlog.h"
 
 #include "player_events_ifc.h"
 
@@ -17,11 +18,11 @@ namespace wavplayeralsa {
 	class WebSocketsApi : public PlayerEventsIfc {
 
 	public:
-		void Initialize(boost::asio::io_service *ioSerivce, uint16_t wsListenPort);
+		void Initialize(std::shared_ptr<spdlog::logger> logger, boost::asio::io_service *io_service, uint16_t ws_listen_port);
 
 	public:
 		// PlayerEventsIfc
-		void NewSongStatus(const std::string &songName, uint64_t startTimeMs, double speed);
+		void NewSongStatus(const std::string &file_id, uint64_t start_time_millis_since_epoch, double speed);
 		void NoSongPlayingStatus();
 
 	private:
@@ -36,12 +37,13 @@ namespace wavplayeralsa {
 
 	private:
 
-		websocketpp::server<websocketpp::config::asio> m_server;
+		websocketpp::server<websocketpp::config::asio> server_;
+		std::shared_ptr<spdlog::logger> logger_;
 
 		typedef std::set<websocketpp::connection_hdl, std::owner_less<websocketpp::connection_hdl>> ConList;
-		ConList m_connections;
+		ConList connections_;
 
-		std::string m_lastStatusMsg;
+		std::string last_status_msg_;
 	};
 
 }
