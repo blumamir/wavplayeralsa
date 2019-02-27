@@ -4,7 +4,9 @@
 #include <cstdint>
 
 #include <boost/asio.hpp>
+
 #include "simple-web-server/server_http.hpp"
+#include "spdlog/spdlog.h"
 
 #include "player_actions_ifc.h"
 
@@ -13,32 +15,25 @@ using HttpServer = SimpleWeb::Server<SimpleWeb::HTTP>;
 
 namespace wavplayeralsa {
 
-	/*
-	Interface to receive player requests via http server
-	*/
 	class HttpApi {
 
 	public:
-		HttpApi();
-
-		void Initialize(boost::asio::io_service *io_service, PlayerActionsIfc *playerReqCallback, uint16_t httpListenPort);
-
-	private:
-		void InitializeHttpServer();
+		void Initialize(std::shared_ptr<spdlog::logger> logger, boost::asio::io_service *io_service, PlayerActionsIfc *player_action_callback, uint16_t http_listen_port);
 
 	private:
 		void OnPutCurrentSong(std::shared_ptr<HttpServer::Response> response, std::shared_ptr<HttpServer::Request> request);
 
+	private:
+		void WriteResponseBadRequest(std::shared_ptr<HttpServer::Response> response, const std::stringstream &err_stream);
 
 	private:
 		// outside configurartion
-		uint16_t m_httpListenPort;
-		boost::asio::io_service *m_io_service;		
-		PlayerActionsIfc *m_playerReqCallback;
+		PlayerActionsIfc *player_action_callback_;
+		std::shared_ptr<spdlog::logger> logger_;
 
 	private:
 		// class private members
-		HttpServer m_server;
+		HttpServer server_;
 
 	};
 

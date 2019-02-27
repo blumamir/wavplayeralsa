@@ -188,8 +188,7 @@ public:
 			}
 			root_logger_->info("pid of player: {}", getpid());
 
-			// std::shared_ptr<spdlog::logger> alsaLogger = root_logger_->clone("alsa");
-			// alsaLogger->info("loggers initialized");			
+			http_api_logger_ = root_logger_->clone("http_api");
 		}
 		catch(const std::exception &e) {
 			std::cerr << "Unable to create loggers. error is: " << e.what() << std::endl;
@@ -201,7 +200,7 @@ public:
 	void InitializeComponents() {
 		try {
 			web_sockets_api_.Initialize(&io_service_, ws_listen_port_);
-			http_api_.Initialize(&io_service_, &alsa_player_handler, http_listen_port_);
+			http_api_.Initialize(http_api_logger_, &io_service_, &alsa_player_handler, http_listen_port_);
 			alsa_player_handler.Initialize(&io_service_, &web_sockets_api_, wav_dir_);			
 		}
 		catch(const std::exception &e) {
@@ -286,6 +285,7 @@ private:
 private:
 	// loggers
 	std::shared_ptr<spdlog::logger> root_logger_;
+	std::shared_ptr<spdlog::logger> http_api_logger_;
 
 
 private:
