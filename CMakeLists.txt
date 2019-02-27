@@ -9,9 +9,9 @@ include_directories(thirdparty)
 
 set (SOURCES 
 	src/wavplayeralsa.cpp 
-	src/single_file_player.cpp 
-	src/status_reporter.cpp
-	src/player_req_http.cpp
+	src/alsa_frames_transfer.cc 
+	src/web_sockets_api.cc
+	src/http_api.cc
 )
 
 set(CMAKE_BUILD_TYPE Debug)

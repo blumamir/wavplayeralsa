@@ -1,17 +1,19 @@
 
-#include "player_req_http.hpp"
+#include "http_api.h"
+
 #include <nlohmann/json.hpp>
+
 
 using json = nlohmann::json;
 
 
 namespace wavplayeralsa {
 
-	PlayerReqHttp::PlayerReqHttp() {
+	HttpApi::HttpApi() {
 
 	}
 
-	void PlayerReqHttp::Initialize(uint16_t httpListenPort, boost::asio::io_service *io_service, PlayerRequestIfc *playerReqCallback) {
+	void HttpApi::Initialize(uint16_t httpListenPort, boost::asio::io_service *io_service, PlayerActionsIfc *playerReqCallback) {
 
 		// set class members
 		m_httpListenPort = httpListenPort;
@@ -22,7 +24,7 @@ namespace wavplayeralsa {
 		InitializeHttpServer();
 	}
 
-	void PlayerReqHttp::OnPutCurrentSong(std::shared_ptr<HttpServer::Response> response, std::shared_ptr<HttpServer::Request> request) {
+	void HttpApi::OnPutCurrentSong(std::shared_ptr<HttpServer::Response> response, std::shared_ptr<HttpServer::Request> request) {
 		std::string requestJsonStr = request->content.string();
 		std::cout << "received new player request: " << requestJsonStr << std::endl;
 
@@ -87,10 +89,10 @@ namespace wavplayeralsa {
 	    response->write(handlerMsg);		
 	}
 
-	void PlayerReqHttp::InitializeHttpServer() {
+	void HttpApi::InitializeHttpServer() {
 	  	m_server.config.port = m_httpListenPort;
 	  	m_server.io_service = std::shared_ptr<boost::asio::io_service>(m_io_service);
-		m_server.resource["^/current-song$"]["PUT"] = std::bind(&PlayerReqHttp::OnPutCurrentSong, this, std::placeholders::_1, std::placeholders::_2);
+		m_server.resource["^/current-song$"]["PUT"] = std::bind(&HttpApi::OnPutCurrentSong, this, std::placeholders::_1, std::placeholders::_2);
 		try {
 	  		m_server.start();
 	  	}

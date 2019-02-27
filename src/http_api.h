@@ -1,9 +1,13 @@
-#include "player_req_ifc.hpp"
+#ifndef WAVPLAYERALSA_HTTP_API_H_
+#define WAVPLAYERALSA_HTTP_API_H_
 
-#include <boost/asio.hpp>
 #include <cstdint>
 
+#include <boost/asio.hpp>
 #include "simple-web-server/server_http.hpp"
+
+#include "player_actions_ifc.h"
+
 
 using HttpServer = SimpleWeb::Server<SimpleWeb::HTTP>;
 
@@ -12,12 +16,12 @@ namespace wavplayeralsa {
 	/*
 	Interface to receive player requests via http server
 	*/
-	class PlayerReqHttp {
+	class HttpApi {
 
 	public:
-		PlayerReqHttp();
+		HttpApi();
 
-		void Initialize(uint16_t httpListenPort, boost::asio::io_service *io_service, PlayerRequestIfc *playerReqCallback);
+		void Initialize(uint16_t httpListenPort, boost::asio::io_service *io_service, PlayerActionsIfc *playerReqCallback);
 
 	private:
 		void InitializeHttpServer();
@@ -30,7 +34,7 @@ namespace wavplayeralsa {
 		// outside configurartion
 		uint16_t m_httpListenPort;
 		boost::asio::io_service *m_io_service;		
-		PlayerRequestIfc *m_playerReqCallback;
+		PlayerActionsIfc *m_playerReqCallback;
 
 	private:
 		// class private members
@@ -40,3 +44,5 @@ namespace wavplayeralsa {
 
 	
 }
+
+#endif // WAVPLAYERALSA_HTTP_API_H_

@@ -1,8 +1,4 @@
 
-#include "single_file_player.h"
-#include <iostream>
-#include <sndfile.h>
-
 #include <string>
 #include <iostream>
 #include <iomanip>
@@ -19,22 +15,24 @@
 #include "spdlog/sinks/basic_file_sink.h"
 #include "spdlog/sinks/stdout_color_sinks.h"
 
-#include <status_reporter_ifc.hpp>
-#include <player_req_http.hpp>
-#include "status_update_msg.h"
+#include "web_sockets_api.h"
+#include "http_api.h"
+#include "player_events_ifc.h"
+#include "player_actions_ifc.h"
+#include "alsa_frames_transfer.h"
 
 
 class AlsaPlayerHandler : 
-	public wavplayeralsa::PlayerRequestIfc,
-	public wavplayeralsa::StatusUpdateMsg 
+	public wavplayeralsa::PlayerActionsIfc,
+	public wavplayeralsa::PlayerEventsIfc 
 {
 
 public:
 
-	AlsaPlayerHandler(boost::asio::io_service *statusReporterIos, wavplayeralsa::StatusReporterIfc *statusReporter) :
+	AlsaPlayerHandler(boost::asio::io_service *statusReporterIos, wavplayeralsa::WebSocketsApi *statusReporter) :
 		m_statusReporterIos(statusReporterIos), m_statusReporter(statusReporter)
 	{
-		m_player.initialize(this, "default");
+		m_player.Initialize(this, "default");
 	}
 
 	void setWavDir(const std::string &wavDir) {
@@ -44,7 +42,7 @@ public:
 public:
 	bool NewSongRequest(const std::string &songName, uint64_t startOffsetMs, std::stringstream &outMsg) {
 
-		if(songName == m_player.getFileId()) {
+		if(songName == m_player.GetFileId()) {
 			outMsg << "changed position of the current song '" << songName << "'. new position in ms is: " << startOffsetMs << std::endl;
 		}
 		else {
@@ -62,7 +60,7 @@ public:
 			}
 
 			try {
-				m_player.loadNewFile(canonicalFullPath, songName);
+				m_player.LoadNewFile(canonicalFullPath, songName);
 				outMsg << "song successfully changed to '" << songName << "'. " <<
 						"new song will start playing at position " << startOffsetMs << " ms";
 			}
@@ -73,37 +71,37 @@ public:
 			}
 		}
 
-		m_player.startPlay(startOffsetMs);
+		m_player.StartPlay(startOffsetMs);
 		return true;
 	}
 
 	bool StopPlayRequest(std::stringstream &outMsg) {
 		try {
-			m_player.stop();
+			m_player.Stop();
 		}
 		catch(const std::runtime_error &e) {
 			outMsg << "Unable to stop current song successfully, error: " << e.what();
 			return false;
 		}
-		outMsg << "current song '" << m_player.getFileId() << "' stopped playing";
+		outMsg << "current song '" << m_player.GetFileId() << "' stopped playing";
 		return true;
 	}
 
 public:
 	void NewSongStatus(const std::string &songName, uint64_t startTimeMs, double speed) {
-		m_statusReporterIos->post(boost::bind(&wavplayeralsa::StatusReporterIfc::NewSongStatus, m_statusReporter, songName, startTimeMs, speed));
+		m_statusReporterIos->post(boost::bind(&wavplayeralsa::WebSocketsApi::NewSongStatus, m_statusReporter, songName, startTimeMs, speed));
 	}
 
 	void NoSongPlayingStatus() {
-		m_statusReporterIos->post(boost::bind(&wavplayeralsa::StatusReporterIfc::NoSongPlayingStatus, m_statusReporter));		
+		m_statusReporterIos->post(boost::bind(&wavplayeralsa::WebSocketsApi::NoSongPlayingStatus, m_statusReporter));		
 	}	
 
 private:
-	wavplayeralsa::SingleFilePlayer m_player;
+	wavplayeralsa::AlsaFramesTransfer m_player;
 	boost::filesystem::path m_wavDir;
 	
 	boost::asio::io_service *m_statusReporterIos;
-	wavplayeralsa::StatusReporterIfc *m_statusReporter;
+	wavplayeralsa::WebSocketsApi *m_statusReporter;
 
 };
 
@@ -137,8 +135,8 @@ public:
 			}
 			logger.info("pid of player: {}", getpid());
 
-			// std::shared_ptr<spdlog::logger> alsaLogger = logger.clone("alsa");
-			// alsaLogger->info("loggers initialized");			
+			std::shared_ptr<spdlog::logger> alsaLogger = logger.clone("alsa");
+			alsaLogger->info("loggers initialized");			
 		}
 		catch(const std::exception &e) {
 			std::cerr << "Unable to create loggers. error is: " << e.what() << std::endl;
@@ -200,8 +198,8 @@ int main(int argc, char *argv[]) {
 	char cwdCharArr[PATH_MAX];
 	getcwd(cwdCharArr, sizeof(cwdCharArr));
 
-	wavplayeralsa::StatusReporterIfc *statusReporter = wavplayeralsa::CreateStatusReporter();
-	wavplayeralsa::PlayerReqHttp playerReqHttp;
+	wavplayeralsa::WebSocketsApi statusReporter;
+	wavplayeralsa::HttpApi playerReqHttp;
 
 
 	cxxopts::Options options("wavplayeralsa", "wav files player with accurate position in audio tracking.");
@@ -217,7 +215,7 @@ int main(int argc, char *argv[]) {
 	boost::asio::io_service io_service;
 	boost::asio::io_service::work work(io_service);
 
-	AlsaPlayerHandler alsaPlayerHandler(&io_service, statusReporter);
+	AlsaPlayerHandler alsaPlayerHandler(&io_service, &statusReporter);
 
 	uint16_t statusReporterPort = 9002;
 	uint16_t httpInterfacePort = 80;
@@ -264,7 +262,7 @@ int main(int argc, char *argv[]) {
 	wavPlayerAlsa.createLoggers(argv[0], saveLogsToFile, logDir);
 
 
-	statusReporter->Configure(&io_service, statusReporterPort);
+	statusReporter.Configure(&io_service, statusReporterPort);
 	playerReqHttp.Initialize(httpInterfacePort, &io_service, &alsaPlayerHandler);
 
 

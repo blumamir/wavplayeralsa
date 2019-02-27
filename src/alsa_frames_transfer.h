@@ -1,15 +1,15 @@
-#ifndef __SINGLE_FILE_PLAYER_H__
-#define __SINGLE_FILE_PLAYER_H__
+#ifndef WAVPLAYERALSA_ALSA_FRAMES_TRANSFER_H_
+#define WAVPLAYERALSA_ALSA_FRAMES_TRANSFER_H_
 
+#include <cstdint>
+#include <atomic>
 #include <string>
 #include <thread>
-#include <atomic>
-#include <cstdint>
 
 #include <alsa/asoundlib.h>
 #include <sndfile.hh>
 
-#include "status_update_msg.h"
+#include "player_events_ifc.h"
 
 /*
 Detailed explanations on how this module operate.
@@ -62,41 +62,36 @@ First, we open the raw wav file with the libsndfile library, which we use to:
 Then we open an alsa pcm device which is used to configure and transfer frames for playback by alsa.
 */
 
-
-
-// forward declerations
-class SndfileHandle;
-
 namespace wavplayeralsa {
 
-	class SingleFilePlayer {
+	class AlsaFramesTransfer {
 
 	public:
 
-		SingleFilePlayer();
-		~SingleFilePlayer();
+		AlsaFramesTransfer();
+		~AlsaFramesTransfer();
 
 		// can throw exception
-		void initialize(StatusUpdateMsg *statusReporter, const std::string &audioDevice);
+		void Initialize(PlayerEventsIfc *statusReporter, const std::string &audioDevice);
 
 		// file id is a string identifier that is used to refer to the file being played.
 		// it is something like: beep.wav or beatles/let_it_be.wav
 		// what should *NOT* be used as fileId is: ../../songs/beep.wav songs//beep.wav ./beep.wav
 		// it should be canonical, so that each file is always identify uniquely
-		const std::string &getFileId();
-		void loadNewFile(const std::string &fullPath, const std::string &fileId);
-		void startPlay(uint32_t positionInMs);
-		void stop();
+		const std::string &GetFileId();
+		void LoadNewFile(const std::string &fullPath, const std::string &fileId);
+		void StartPlay(uint32_t positionInMs);
+		void Stop();
 
 	private:
-		void initSndFile();
-		void initAlsa();
-		bool isAlsaStatePlaying();
-		void checkSongStartTime();
+		void InitSndFile();
+		void InitAlsa();
+		void CheckSongStartTime();
 
 	private:
-		void transferFramesToPcm();
-		void playLoopOnThread();
+		void TransferFramesWrapper();
+		void TransferFramesLoop();
+		bool IsAlsaStatePlaying();
 
 	private:
 		bool m_initialized = false;
@@ -144,7 +139,7 @@ namespace wavplayeralsa {
 
 	private:
 		uint64_t m_songStartTimeMsSinceEphoc = 0;
-		StatusUpdateMsg *m_statusReporter = nullptr;
+		PlayerEventsIfc *m_statusReporter = nullptr;
 
 
 	};
@@ -152,4 +147,4 @@ namespace wavplayeralsa {
 }
 
 
-#endif //__SINGLE_FILE_PLAYER_H__
+#endif // WAVPLAYERALSA_ALSA_FRAMES_TRANSFER_H_

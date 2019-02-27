@@ -1,6 +1,5 @@
-#include "single_file_player.h"
+#include "alsa_frames_transfer.h"
 
-#include <alsa/asoundlib.h>
 #include <iostream>
 #include <iomanip>
 #include <sstream>
@@ -9,14 +8,14 @@
 
 namespace wavplayeralsa {
 
-	SingleFilePlayer::SingleFilePlayer() : 
+	AlsaFramesTransfer::AlsaFramesTransfer() : 
 		m_shouldBePlaying(false)
 	{}
 	
 
-	SingleFilePlayer::~SingleFilePlayer() {
+	AlsaFramesTransfer::~AlsaFramesTransfer() {
 
-		stop();
+		Stop();
 
 		if(m_alsaPlaybackHandle != nullptr) {
 			snd_pcm_close(m_alsaPlaybackHandle);
@@ -24,11 +23,11 @@ namespace wavplayeralsa {
 		}
 	}
 
-	const std::string &SingleFilePlayer::getFileId() { 
+	const std::string &AlsaFramesTransfer::GetFileId() { 
 		return m_fileId; 
 	}
 
-	void SingleFilePlayer::initialize(StatusUpdateMsg *statusReporter, const std::string &audioDevice) {
+	void AlsaFramesTransfer::Initialize(PlayerEventsIfc *statusReporter, const std::string &audioDevice) {
 
 		if(m_initialized) {
 			throw std::runtime_error("Initialize called on an already initialized alsa player");
@@ -49,7 +48,7 @@ namespace wavplayeralsa {
 		m_initialized = true;
 	}
 
-	void SingleFilePlayer::checkSongStartTime() {
+	void AlsaFramesTransfer::CheckSongStartTime() {
 		int err;
 		snd_pcm_sframes_t delay = 0;
 		int64_t posInFrames = 0;
@@ -88,10 +87,10 @@ namespace wavplayeralsa {
 
 	}
 
-	void SingleFilePlayer::transferFramesToPcm() {
+	void AlsaFramesTransfer::TransferFramesWrapper() {
 
 		try {
-			playLoopOnThread();
+			TransferFramesLoop();
 		}
 		catch(const std::runtime_error &e) {
 			std::cerr << e.what() << std::endl;
@@ -100,7 +99,7 @@ namespace wavplayeralsa {
 		m_statusReporter->NoSongPlayingStatus();		
 	}
 
-	void SingleFilePlayer::playLoopOnThread() {
+	void AlsaFramesTransfer::TransferFramesLoop() {
 
 		int err;
 
@@ -169,7 +168,7 @@ namespace wavplayeralsa {
 				}
 			}
 
-			checkSongStartTime();
+			CheckSongStartTime();
 		}
 
 		// we will be out of the loop if we finished writing frames to pcm.
@@ -177,7 +176,7 @@ namespace wavplayeralsa {
 
 		while(true) {
 
-			bool isCurrentlyPlaying = isAlsaStatePlaying();
+			bool isCurrentlyPlaying = IsAlsaStatePlaying();
 			if(!isCurrentlyPlaying) {
 				std::cout << "done playing current song. reached end of buffer and pcm is empty" << std::endl;
 			}
@@ -190,18 +189,18 @@ namespace wavplayeralsa {
 				return;
 			}
 
-			checkSongStartTime();
+			CheckSongStartTime();
 			std::chrono::milliseconds sleepTimeMs(5);
 			std::this_thread::sleep_for(sleepTimeMs);
 		}
 	}
 
-	bool SingleFilePlayer::isAlsaStatePlaying() {
+	bool AlsaFramesTransfer::IsAlsaStatePlaying() {
 		int status = snd_pcm_state(m_alsaPlaybackHandle);
 		return (status == SND_PCM_STATE_RUNNING) || (status == SND_PCM_STATE_PREPARED);
 	}
 
-	void SingleFilePlayer::startPlay(uint32_t positionInMs) {
+	void AlsaFramesTransfer::StartPlay(uint32_t positionInMs) {
 
 		if(!m_sndInitialized) {
 			throw std::runtime_error("the player is not initialized with a valid sound file.");
@@ -213,7 +212,7 @@ namespace wavplayeralsa {
 		}
 		m_sndFile.seek(m_currPositionInFrames, SEEK_SET);
 
-		stop();
+		Stop();
 
 		int err;
 		std::stringstream errDesc;
@@ -223,10 +222,10 @@ namespace wavplayeralsa {
 		}
 
 		m_shouldBePlaying = true;
-		m_playingThread = new std::thread(&SingleFilePlayer::transferFramesToPcm, this);
+		m_playingThread = new std::thread(&AlsaFramesTransfer::TransferFramesWrapper, this);
 	}
 
-	void SingleFilePlayer::stop() {
+	void AlsaFramesTransfer::Stop() {
 		std::cout << "stop is called on current alsa player (for the current song)." << std::endl;
 		m_statusReporter->NoSongPlayingStatus();
 		m_shouldBePlaying = false;
@@ -238,26 +237,26 @@ namespace wavplayeralsa {
 		m_songStartTimeMsSinceEphoc = 0; // invalidate old start time so on next play a new status will be sent
 	}
 
-	void SingleFilePlayer::loadNewFile(const std::string &fullPath, const std::string &fileId) {
+	void AlsaFramesTransfer::LoadNewFile(const std::string &fullPath, const std::string &fileId) {
 
 		if(!m_initialized) {
-			throw std::runtime_error("loadNewFile called but player not initilized");
+			throw std::runtime_error("LoadNewFile called but player not initilized");
 		}
 
-		this->stop();
+		this->Stop();
 
 		// mark snd as not initialized. after everything goes well, and no exception is thrown, it will be changed to initialized
 		m_sndInitialized = false;
 
 		m_fullFileName = fullPath;
 		m_fileId = fileId;
-		initSndFile();	
-		initAlsa();	
+		InitSndFile();	
+		InitAlsa();	
 
 		m_sndInitialized = true;
 	}
 
-	void SingleFilePlayer::initSndFile() {
+	void AlsaFramesTransfer::InitSndFile() {
 
 		m_sndFile = SndfileHandle(m_fullFileName);
 		if(m_sndFile.error() != 0) {
@@ -341,7 +340,7 @@ namespace wavplayeralsa {
 		uint64_t bufferSize = m_totalFrames * (uint64_t)m_channels * (uint64_t)m_sampleChannelSizeBytes;
 	}
 
-	bool SingleFilePlayer::GetFormatForAlsa(snd_pcm_format_t &outFormat) {
+	bool AlsaFramesTransfer::GetFormatForAlsa(snd_pcm_format_t &outFormat) {
 		switch(m_sampleType) {
 
 			case SampleTypeSigned: {
@@ -406,7 +405,7 @@ namespace wavplayeralsa {
 	}
 
 
-	void SingleFilePlayer::initAlsa() {
+	void AlsaFramesTransfer::InitAlsa() {
 
 		int err;
 		std::stringstream errDesc;
