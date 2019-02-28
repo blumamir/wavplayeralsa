@@ -1,15 +1,17 @@
 # wavplayeralsa
 ## Installation process (tested on Raspbian and Ubuntu)
 0. Install Raspbian https://www.raspberrypi.org/documentation/installation/installing-images/
-1. Install sndfile and libsound libs
+1. Install boost, sndfile and libsound libs
 ```
-  sudo apt-get install libsndfile1-dev libasound2-dev
+  sudo apt-get install libsndfile1-dev libasound2-dev libboost-all-dev
 ```  
 2. Clone the wavplayeralsa project and compile it
 ```
   git clone https://github.com/BlumAmir/wavplayeralsa.git
   cd wavplayeralsa/
-  cmake .
+  mkdir bin
+  cd bin
+  cmake ..
   make
 ```
 3. Create a configuration file for the player
@@ -24,8 +26,36 @@ The executable supports a few commandline arguments, for a list of available opt
 
 To play a specific file use ./wavplayeralsa -f <filename>.wav
 
-TODO
-## Control interface
 
-TODO
+## Control interface
+Controling the player is done via HTTP interface.
+Player's command line option 'http_listen_port' is used to set the port on which the player listens for control commands and queries.
+
+To play an audio file, send a json to uri http://PLAYE_IP:HTTP_LISTEN_PORT/current-song in the following format:
+`{ "file_id": "path/from/wav/dir/wav_file_name.wav", "start_offset_ms":0 }`
+example with curl:
+```
+curl -X PUT -H "Content-Type: application/json" -d "{\"file_id\": \"beeps.wav\", \"start_offset_ms\":0}" "http://127.0.0.1:8080/current-song"
+```
+
+To stop an audio file which is currently playing, send a json to uri http://YOUR_IP:HTTP_LISTEN_PORT/current-song with empty or missing 'file_id':
+`{ "file_id": "" }` or `{}`
+example with curl :
+```
+curl -X PUT -H "Content-Type: application/json" -d "{}" "http://127.0.0.1:8080/current-song"
+```
+
+
 ## Position report interface
+Player's command line option 'ws_listen_port' is used to set the port on which the player listens for web sockets client who wish to receive push notifications on events:
+
+When a new audio file is played, or when the current audio position is changed externally:
+`{"file_id":"beeps.wav","song_is_playing":true,"speed":1.0,"start_time_millis_since_epoch":1551335294511}`
+
+When a stop is performed via control interface, or when audio reach end of file:
+`{"song_is_playing":false}`
+
+`start_time_millis_since_epoch` is the audio's file start time (position 0) in milliseconds, since UNIX Epoch time (00:00:00 Thursday, 1 January 1970, UTC).
+Client can calculate the file's audio position at any givin time, using it's local clock, which should be synchronized to the player's clock.
+This enable clients to act upon precise and continuous audio position, which does not dependent on network latency and update rate.
+Any offset in clock synchronization (between client's and player's os) will be carried to audio position calculation, thus user should assure such offset is minimal (using NTP for example, or running client on same machine as player).
