@@ -181,6 +181,8 @@ public:
 			}
 
 			root_logger_ = std::make_shared<spdlog::logger>("root", sinks.begin(), sinks.end());
+			root_logger_->flush_on(spdlog::level::info); 
+
 			root_logger_->info("hello wavplayeralsa. logger initialized");
 			if(save_logs_to_file_) {
 				root_logger_->info("log file for this run is: '{}'", m_logFilePath);

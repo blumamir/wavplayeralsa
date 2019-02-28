@@ -24,7 +24,12 @@
 ## Usage
 The executable supports a few commandline arguments, for a list of available options use ./wavplayeralsa -h
 
-To play a specific file use ./wavplayeralsa -f <filename>.wav
+To play a specific file use `./wavplayeralsa -f <file_name>.wav`
+
+
+## logging
+Player write log messages to console.
+By setting `log_dir` command line argument to an existing directory, player will create a unique log file for each run.
 
 
 ## Control interface
@@ -32,10 +37,10 @@ Controling the player is done via HTTP interface.
 Player's command line option 'http_listen_port' is used to set the port on which the player listens for control commands and queries.
 
 To play an audio file, send a json to uri http://PLAYE_IP:HTTP_LISTEN_PORT/current-song in the following format:
-`{ "file_id": "path/from/wav/dir/wav_file_name.wav", "start_offset_ms":0 }`
+`{ "file_id": "path/from/wav/dir/<file_name>.wav", "start_offset_ms":0 }`
 example with curl:
 ```
-curl -X PUT -H "Content-Type: application/json" -d "{\"file_id\": \"beeps.wav\", \"start_offset_ms\":0}" "http://127.0.0.1:8080/current-song"
+curl -X PUT -H "Content-Type: application/json" -d "{\"file_id\": \"<file_name>.wav\", \"start_offset_ms\":0}" "http://127.0.0.1:8080/current-song"
 ```
 
 To stop an audio file which is currently playing, send a json to uri http://YOUR_IP:HTTP_LISTEN_PORT/current-song with empty or missing 'file_id':
@@ -50,7 +55,7 @@ curl -X PUT -H "Content-Type: application/json" -d "{}" "http://127.0.0.1:8080/c
 Player's command line option 'ws_listen_port' is used to set the port on which the player listens for web sockets client who wish to receive push notifications on events:
 
 When a new audio file is played, or when the current audio position is changed externally:
-`{"file_id":"beeps.wav","song_is_playing":true,"speed":1.0,"start_time_millis_since_epoch":1551335294511}`
+`{"file_id":"<file_name>.wav","song_is_playing":true,"speed":1.0,"start_time_millis_since_epoch":1551335294511}`
 
 When a stop is performed via control interface, or when audio reach end of file:
 `{"song_is_playing":false}`
