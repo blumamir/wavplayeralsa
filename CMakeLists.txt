@@ -12,6 +12,7 @@ set (SOURCES
 	src/alsa_frames_transfer.cc 
 	src/web_sockets_api.cc
 	src/http_api.cc
+	src/audio_files_manager.cc
 )
 
 set(CMAKE_BUILD_TYPE Debug)

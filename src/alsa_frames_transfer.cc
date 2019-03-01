@@ -38,8 +38,7 @@ namespace wavplayeralsa {
 		int err;
 		std::stringstream errDesc;
 
-		// const char *audioDevice = "plughw:0,0";
-		//const char *audioDevice = "default";
+		// audioDevice should be somthing like "plughw:0,0", "default"
 		if( (err = snd_pcm_open(&m_alsaPlaybackHandle, audioDevice.c_str(), SND_PCM_STREAM_PLAYBACK, 0)) < 0) {
 			errDesc << "cannot open audio device " << audioDevice << " (" << snd_strerror(err) << ")";
 			throw std::runtime_error(errDesc.str());
