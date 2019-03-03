@@ -101,7 +101,7 @@ namespace wavplayeralsa {
 			logger_->info("playing audio file ended successfully (transfered all frames to pcm and it is empty)");
 		}
 		catch(const std::runtime_error &e) {
-			logger_->error("error while playing current wav file. stopped transfering frames to alsa. {}", e.what());
+			logger_->error("error while playing current wav file. stopped transfering frames to alsa. exception is: {}", e.what());
 		}
 		player_events_callback_->NoSongPlayingStatus();		
 	}
@@ -163,17 +163,17 @@ namespace wavplayeralsa {
 				break;
 			}
 
+
 			int frames_written = snd_pcm_writei(alsa_playback_handle_, buffer_for_transfer, frames_to_deliver);
 			if( frames_written < 0) {
 				err_desc << "snd_pcm_writei failed (" << snd_strerror(frames_written) << ")";
 				throw std::runtime_error(err_desc.str());				
 			}
-			else {
-				curr_position_frames_ += frames_written;
-				if(frames_written != frames_to_deliver) {
-					logger_->warn("transfered to alsa less frame then requested. frames_to_deliver: {}, frames_written: {}", frames_to_deliver, frames_written);
-					snd_file_.seek(curr_position_frames_, SEEK_SET);
-				}
+
+			curr_position_frames_ += frames_written;
+			if(frames_written != frames_to_deliver) {
+				logger_->warn("transfered to alsa less frame then requested. frames_to_deliver: {}, frames_written: {}", frames_to_deliver, frames_written);
+				snd_file_.seek(curr_position_frames_, SEEK_SET);
 			}
 
 			CheckSongStartTime();
