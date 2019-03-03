@@ -93,9 +93,12 @@ namespace wavplayeralsa {
 
 	private:
 		void TransferFramesWrapper();
-		void TransferFramesLoop();
 		bool IsAlsaStatePlaying();
 		void CheckSongStartTime();
+		// once all frames are written to pcm, this function runs until pcm is empty,
+		// while allowing the cancelation with the should_be_playing_ flag
+		void PcmDrainLoop();
+		void FramesToPcmTransferLoop();
 
 	private:
 		std::shared_ptr<spdlog::logger> logger_;
