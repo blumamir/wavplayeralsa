@@ -6,8 +6,9 @@
 #include <string>
 #include <thread>
 
-#include <alsa/asoundlib.h>
-#include <sndfile.hh>
+#include "alsa/asoundlib.h"
+#include "sndfile.hh"
+#include "spdlog/spdlog.h"
 
 #include "player_events_ifc.h"
 
@@ -72,74 +73,86 @@ namespace wavplayeralsa {
 		~AlsaFramesTransfer();
 
 		// can throw exception
-		void Initialize(PlayerEventsIfc *statusReporter, const std::string &audioDevice);
+		void Initialize(std::shared_ptr<spdlog::logger> logger, 
+			PlayerEventsIfc *player_events_callback, 
+			const std::string &audio_device);
 
 		// file id is a string identifier that is used to refer to the file being played.
 		// it is something like: beep.wav or beatles/let_it_be.wav
 		// what should *NOT* be used as fileId is: ../../songs/beep.wav songs//beep.wav ./beep.wav
 		// it should be canonical, so that each file is always identify uniquely
-		const std::string &GetFileId();
-		void LoadNewFile(const std::string &fullPath, const std::string &fileId);
-		void StartPlay(uint32_t positionInMs);
+		const std::string &GetFileId() const;
+		void LoadNewFile(const std::string &full_file_name, const std::string &file_id);
+		void StartPlay(uint32_t position_in_ms);
 		void Stop();
 
 	private:
 		void InitSndFile();
 		void InitAlsa();
-		void CheckSongStartTime();
+		bool GetFormatForAlsa(snd_pcm_format_t &out_format) const;
 
 	private:
 		void TransferFramesWrapper();
 		void TransferFramesLoop();
 		bool IsAlsaStatePlaying();
+		void CheckSongStartTime();
 
 	private:
-		bool m_initialized = false;
-		bool m_sndInitialized = false; // sound file is loaded successfully, and alsa is configured to support it
+		std::shared_ptr<spdlog::logger> logger_;
 
 	private:
-
-		std::string m_fileId;
-		std::string m_fullFileName;
+		// initialization detection
+		bool initialized_ = false;
+		bool snd_initialized_ = false; // if true -> sound file is loaded successfully, and alsa is configured to support it
 
 	private:
+		// current loaded file
+		std::string file_id_;
+		std::string full_file_name_;
+
+	private:
+		// snd file stuff
+
 	    enum SampleType {
 	    	SampleTypeSigned = 0,
 	    	SampleTypeUnsigned = 1,
 	    	SampleTypeFloat = 2
 	    };
-	    unsigned int m_frameRate = 44100;
-	    unsigned int m_channels = 2;
-	    bool m_isEndianLittle = true; // if false the endian is big :)
-	    SampleType m_sampleType = SampleTypeSigned;
-	    unsigned int m_sampleChannelSizeBytes = 2;
+	    static const char *SampleTypeToString(SampleType sample_type);
 
-	private:
-		bool GetFormatForAlsa(snd_pcm_format_t &outFormat);
-		snd_pcm_t *m_alsaPlaybackHandle;
+		SndfileHandle snd_file_;
 
-	private:
-		// snd file stuff
-		SndfileHandle m_sndFile;
-		unsigned int m_bytesPerFrame = 1;
-		unsigned int m_framesCapacityInBuffer = 0; // how many frames can be stored in a buffer with size TRANSFER_BUFFER_SIZE
-	    uint64_t m_totalFrames = 0;
+		// from file
+	    unsigned int frame_rate_ = 44100;
+	    unsigned int num_of_channels_ = 2;
+	    bool is_endian_little_ = true; // if false the endian is big :)
+	    SampleType sample_type_ = SampleTypeSigned;
+	    unsigned int bytes_per_sample_ = 2;
+	    uint64_t total_frame_in_file_ = 0;
+
+	    // calculated
+		unsigned int bytes_per_frame_ = 1;
+		unsigned int frames_capacity_in_buffer_ = 0; // how many frames can be stored in a buffer with size TRANSFER_BUFFER_SIZE
 
 	private:
 		// alsa frames transfer stuff
+		snd_pcm_t *alsa_playback_handle_;
+
 		static const int AVAIL_MIN = 4096; // tells alsa to return from wait when buffer has this size of free space
 		static const int TRANSFER_BUFFER_SIZE = 4096 * 16; // 64KB this is the buffer used to pass frames to alsa. this is the maximum number of frames to pass as one chunk
 
 		// what is the next frame to be delivered to alsa
-		uint64_t m_currPositionInFrames = 0;
+		uint64_t curr_position_frames_ = 0;
 
 	private:
-		std::thread *m_playingThread = nullptr;
-		std::atomic_bool m_shouldBePlaying; // used to cancel the playing thread
+		// transfer thread
+		std::thread playing_thread_;
+		std::atomic_bool should_be_playing_; // used to cancel the playing thread
 
 	private:
-		uint64_t m_songStartTimeMsSinceEphoc = 0;
-		PlayerEventsIfc *m_statusReporter = nullptr;
+		// position reporting
+		uint64_t audio_start_time_ms_since_epoch_ = 0;
+		PlayerEventsIfc *player_events_callback_ = nullptr;
 
 
 	};

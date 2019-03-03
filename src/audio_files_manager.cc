@@ -8,12 +8,11 @@ namespace wavplayeralsa {
 			const std::string &wav_dir, 
 			const std::string &audio_device) 
 	{
-		alsa_frames_transfer_logger = alsa_frames_transfer_logger_;
 		wav_dir_ = boost::filesystem::path(wav_dir);
 		main_io_service_ = main_io_service;
 		player_events_ifc_ = player_events_ifc;
 
-		alsa_frames_transfer_.Initialize(this, audio_device);
+		alsa_frames_transfer_.Initialize(alsa_frames_transfer_logger, this, audio_device);
 	}
 
 	bool AudioFilesManager::NewSongRequest(const std::string &file_id, uint64_t start_offset_ms, std::stringstream &out_msg) {

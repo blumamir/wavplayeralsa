@@ -9,7 +9,7 @@
 namespace wavplayeralsa {
 
 	AlsaFramesTransfer::AlsaFramesTransfer() : 
-		m_shouldBePlaying(false)
+		should_be_playing_(false)
 	{}
 	
 
@@ -17,72 +17,78 @@ namespace wavplayeralsa {
 
 		Stop();
 
-		if(m_alsaPlaybackHandle != nullptr) {
-			snd_pcm_close(m_alsaPlaybackHandle);
-			m_alsaPlaybackHandle = nullptr;
+		if(alsa_playback_handle_ != nullptr) {
+			snd_pcm_close(alsa_playback_handle_);
+			alsa_playback_handle_ = nullptr;
 		}
 	}
 
-	const std::string &AlsaFramesTransfer::GetFileId() { 
-		return m_fileId; 
+	const std::string &AlsaFramesTransfer::GetFileId() const { 
+		return file_id_; 
 	}
 
-	void AlsaFramesTransfer::Initialize(PlayerEventsIfc *statusReporter, const std::string &audioDevice) {
+	void AlsaFramesTransfer::Initialize(std::shared_ptr<spdlog::logger> logger, 
+			PlayerEventsIfc *player_events_callback, 
+			const std::string &audio_device) 
+	{
 
-		if(m_initialized) {
+		if(initialized_) {
 			throw std::runtime_error("Initialize called on an already initialized alsa player");
 		}
 
-		m_statusReporter = statusReporter;
+		player_events_callback_ = player_events_callback;
+		logger_ = logger;
 
 		int err;
-		std::stringstream errDesc;
+		std::stringstream err_desc;
 
-		// audioDevice should be somthing like "plughw:0,0", "default"
-		if( (err = snd_pcm_open(&m_alsaPlaybackHandle, audioDevice.c_str(), SND_PCM_STREAM_PLAYBACK, 0)) < 0) {
-			errDesc << "cannot open audio device " << audioDevice << " (" << snd_strerror(err) << ")";
-			throw std::runtime_error(errDesc.str());
+		// audio_device should be somthing like "plughw:0,0", "default"
+		if( (err = snd_pcm_open(&alsa_playback_handle_, audio_device.c_str(), SND_PCM_STREAM_PLAYBACK, 0)) < 0) {
+			err_desc << "cannot open audio device " << audio_device << " (" << snd_strerror(err) << ")";
+			throw std::runtime_error(err_desc.str());
 		}
 
-		m_initialized = true;
+		initialized_ = true;
 	}
 
 	void AlsaFramesTransfer::CheckSongStartTime() {
 		int err;
 		snd_pcm_sframes_t delay = 0;
-		int64_t posInFrames = 0;
+		int64_t pos_in_frames = 0;
 
-		if( (err = snd_pcm_delay(m_alsaPlaybackHandle, &delay)) < 0) {
+		if( (err = snd_pcm_delay(alsa_playback_handle_, &delay)) < 0) {
 			std::cerr << "cannot query current offset in buffer (" << snd_strerror(err) << ")" << std::endl;
 			return;
 		}	
 
-		// this is a majic number test to remove end of file wrong reporting
+		// this is a magic number test to remove end of file wrong reporting
 		if(delay < 4096) {
 			return;
 		}
-		posInFrames = m_currPositionInFrames - delay; 			
-		int64_t msSinceSongStart = ((posInFrames * (int64_t)1000) / (int64_t)m_frameRate);
+		pos_in_frames = curr_position_frames_ - delay; 			
+		int64_t ms_since_audio_file_start = ((pos_in_frames * (int64_t)1000) / (int64_t)frame_rate_);
 
 		struct timeval tv;
 		gettimeofday(&tv, NULL);
-		uint64_t currTimeMsSinceEpoch = (uint64_t)(tv.tv_sec) * 1000 + (uint64_t)(tv.tv_usec) / 1000;
-		uint64_t songStartTimeMsSinceEphoc = (int64_t)currTimeMsSinceEpoch - msSinceSongStart;
+		// convert sec to ms and usec to ms
+		uint64_t curr_time_ms_since_epoch = (uint64_t)(tv.tv_sec) * 1000 + (uint64_t)(tv.tv_usec) / 1000;
+		uint64_t audio_file_start_time_ms_since_epoch = (int64_t)curr_time_ms_since_epoch - ms_since_audio_file_start;
 
-		int64_t diffFromPrev = songStartTimeMsSinceEphoc - m_songStartTimeMsSinceEphoc;
-		if(diffFromPrev > 1 || diffFromPrev < -1) {
-			m_statusReporter->NewSongStatus(m_fileId, songStartTimeMsSinceEphoc, 1.0);
-			if(m_songStartTimeMsSinceEphoc > 0) {
-				std::cout << diffFromPrev << "\t" << std::setfill('0') << std::setw(4) << (songStartTimeMsSinceEphoc % 10000) << "\t" << 
-					std::setfill('0') << std::setw(4) << (currTimeMsSinceEpoch % 10000) << "\t" << 
-					msSinceSongStart << "\t" << 
-					posInFrames << "\t" << 
-					m_currPositionInFrames << "\t" << 
-					delay << 
-					std::endl;		
+		int64_t diff_from_prev = audio_file_start_time_ms_since_epoch - audio_start_time_ms_since_epoch_;
+		// there might be small jittering, we don't want to update the value often.
+		if(diff_from_prev > 1 || diff_from_prev < -1) {
+			player_events_callback_->NewSongStatus(file_id_, audio_file_start_time_ms_since_epoch, 1.0);
+
+			std::stringstream msg_stream;
+			msg_stream << "calculated a new audio file start time: " << audio_file_start_time_ms_since_epoch << " (ms since epoch). ";
+			if(audio_start_time_ms_since_epoch_ > 0) {
+				msg_stream << "this is a change since last calculation of " << diff_from_prev << " ms. ";
 			}
+			msg_stream << "pcm delay in frames as reported by alsa: " << delay << " and position in file is " << 
+				ms_since_audio_file_start << " ms. ";
+			logger_->info(msg_stream.str());
 		}
-		m_songStartTimeMsSinceEphoc = songStartTimeMsSinceEphoc;
+		audio_start_time_ms_since_epoch_ = audio_file_start_time_ms_since_epoch;
 
 	}
 
@@ -94,8 +100,8 @@ namespace wavplayeralsa {
 		catch(const std::runtime_error &e) {
 			std::cerr << e.what() << std::endl;
 		}
-		std::cout << "song ended" << std::endl;
-		m_statusReporter->NoSongPlayingStatus();		
+		logger_->info("playing audio file ended successfully (transfered all frames to pcm and it is empty)");
+		player_events_callback_->NoSongPlayingStatus();		
 	}
 
 	void AlsaFramesTransfer::TransferFramesLoop() {
@@ -104,66 +110,66 @@ namespace wavplayeralsa {
 
 		while(true) {
 
-			if(m_shouldBePlaying == false) {
-				std::stringstream errDesc;
-				if( (err = snd_pcm_drop(m_alsaPlaybackHandle)) < 0 ) {
-					errDesc << "snd_pcm_drop failed (" << snd_strerror(err) << ")";
-					throw std::runtime_error(errDesc.str());
+			if(should_be_playing_ == false) {
+				std::stringstream err_desc;
+				if( (err = snd_pcm_drop(alsa_playback_handle_)) < 0 ) {
+					err_desc << "snd_pcm_drop failed (" << snd_strerror(err) << ")";
+					throw std::runtime_error(err_desc.str());
 				}
 				return;
 			}
 
-			const int waitTimeOutMs = 5;
-			if( (err = snd_pcm_wait(m_alsaPlaybackHandle, waitTimeOutMs)) < 0) {
+			const int wait_timeout_ms = 5;
+			if( (err = snd_pcm_wait(alsa_playback_handle_, wait_timeout_ms)) < 0) {
 				std::cerr << "pool failed (" << snd_strerror(err) << ")" << std::endl;
 				break;
 			}
 			if(err == 0) {
-				// timeout occured. means we waited waitTimeOutMs ms, and not enough frames were
+				// timeout occured. means we waited wait_timeout_ms ms, and not enough frames were
 				// availible in the alsa buffers. 
 				// we will just continue, that will give us a chance to check for stop playing again
 				continue;
 			}
 
 			// calculate how many frames to write
-			snd_pcm_sframes_t framesToDeliver;
-			if( (framesToDeliver = snd_pcm_avail_update(m_alsaPlaybackHandle)) < 0) {
-				if(framesToDeliver == -EPIPE) {
+			snd_pcm_sframes_t frames_to_deliver;
+			if( (frames_to_deliver = snd_pcm_avail_update(alsa_playback_handle_)) < 0) {
+				if(frames_to_deliver == -EPIPE) {
 					std::cerr << "an xrun occured" << std::endl;
 					break;
 				}
 				else {
-					std::cerr << "unknown ALSA avail update return value (" << framesToDeliver << ")" << std::endl;
+					std::cerr << "unknown ALSA avail update return value (" << frames_to_deliver << ")" << std::endl;
 					break;
 				}
 			}
 
 			// we want to deliver as many frames as possible.
-			// we can put framesToDeliver number of frames, but the buffer can only hold m_framesCapacityInBuffer frames
-			framesToDeliver = framesToDeliver > m_framesCapacityInBuffer ? m_framesCapacityInBuffer : framesToDeliver;
-			unsigned int bytesToDeliver = framesToDeliver * m_bytesPerFrame;
+			// we can put frames_to_deliver number of frames, but the buffer can only hold frames_capacity_in_buffer_ frames
+			frames_to_deliver = frames_to_deliver > frames_capacity_in_buffer_ ? frames_capacity_in_buffer_ : frames_to_deliver;
+			unsigned int bytes_to_deliver = frames_to_deliver * bytes_per_frame_;
 
 			// read the frames from the file. TODO: what if readRaw fails?
-			char bufferForTransfer[TRANSFER_BUFFER_SIZE];
-			bytesToDeliver = m_sndFile.readRaw(bufferForTransfer, bytesToDeliver);
-			if(bytesToDeliver < 0) {
-				std::cerr << "Failed reading raw frames from snd file. returned: " << bytesToDeliver << std::endl;
+			char buffer_for_transfer[TRANSFER_BUFFER_SIZE];
+			bytes_to_deliver = snd_file_.readRaw(buffer_for_transfer, bytes_to_deliver);
+			if(bytes_to_deliver < 0) {
+				std::cerr << "Failed reading raw frames from snd file. returned: " << bytes_to_deliver << std::endl;
 				continue;
 			}
-			if(bytesToDeliver == 0) {
-				std::cout << "Done transfering snd frames to pcm." << std::endl;
+			if(bytes_to_deliver == 0) {
+				logger_->info("done writing all frames to pcm. waiting for audio device to play remaining frames in the buffer");
 				break;
 			}
 
-			int framesWritten = snd_pcm_writei(m_alsaPlaybackHandle, bufferForTransfer, framesToDeliver);
-			if( framesWritten < 0) {
-				std::cerr << "write failed (" << snd_strerror(framesWritten) << ")" << std::endl;
+			int frames_written = snd_pcm_writei(alsa_playback_handle_, buffer_for_transfer, frames_to_deliver);
+			if( frames_written < 0) {
+				std::cerr << "write failed (" << snd_strerror(frames_written) << ")" << std::endl;
 			}
 			else {
-				m_currPositionInFrames += framesWritten;
-				if(framesWritten != framesToDeliver) {
-					std::cerr << "transfered to alsa less frame then requested. framesToDeliver:" << framesToDeliver << " framesWritten: " << framesWritten << std::endl;
-					m_sndFile.seek(m_currPositionInFrames, SEEK_SET);
+				curr_position_frames_ += frames_written;
+				if(frames_written != frames_to_deliver) {
+					std::cerr << "transfered to alsa less frame then requested. frames_to_deliver:" << frames_to_deliver << " frames_written: " << frames_written << std::endl;
+					snd_file_.seek(curr_position_frames_, SEEK_SET);
 				}
 			}
 
@@ -175,224 +181,221 @@ namespace wavplayeralsa {
 
 		while(true) {
 
-			bool isCurrentlyPlaying = IsAlsaStatePlaying();
-			if(!isCurrentlyPlaying) {
-				std::cout << "done playing current song. reached end of buffer and pcm is empty" << std::endl;
+			bool is_currently_playing = IsAlsaStatePlaying();
+			if(!is_currently_playing) {
+				logger_->info("playing audio file ended successfully (transfered all frames to pcm and it is empty)");
 			}
-			if(!isCurrentlyPlaying || m_shouldBePlaying == false) {
-				std::stringstream errDesc;
-				if( (err = snd_pcm_drop(m_alsaPlaybackHandle)) < 0 ) {
-					errDesc << "snd_pcm_drop failed (" << snd_strerror(err) << ")";
-					throw std::runtime_error(errDesc.str());
+			if(!is_currently_playing || should_be_playing_ == false) {
+				std::stringstream err_desc;
+				if( (err = snd_pcm_drop(alsa_playback_handle_)) < 0 ) {
+					err_desc << "snd_pcm_drop failed (" << snd_strerror(err) << ")";
+					throw std::runtime_error(err_desc.str());
 				}
 				return;
 			}
 
 			CheckSongStartTime();
-			std::chrono::milliseconds sleepTimeMs(5);
-			std::this_thread::sleep_for(sleepTimeMs);
+			std::this_thread::sleep_for(std::chrono::milliseconds(5));
 		}
 	}
 
 	bool AlsaFramesTransfer::IsAlsaStatePlaying() {
-		int status = snd_pcm_state(m_alsaPlaybackHandle);
+		int status = snd_pcm_state(alsa_playback_handle_);
 		return (status == SND_PCM_STATE_RUNNING) || (status == SND_PCM_STATE_PREPARED);
 	}
 
-	void AlsaFramesTransfer::StartPlay(uint32_t positionInMs) {
+	void AlsaFramesTransfer::StartPlay(uint32_t position_in_ms) {
 
-		if(!m_sndInitialized) {
+		if(!snd_initialized_) {
 			throw std::runtime_error("the player is not initialized with a valid sound file.");
 		}
 
-		m_currPositionInFrames = (positionInMs / 1000.0) * (double)m_frameRate; 
-		if(m_currPositionInFrames > m_totalFrames) {
-			m_currPositionInFrames = m_totalFrames;
+		double position_in_seconds = (double)position_in_ms / 1000.0;
+		curr_position_frames_ = position_in_seconds * (double)frame_rate_; 
+		if(curr_position_frames_ > total_frame_in_file_) {
+			curr_position_frames_ = total_frame_in_file_;
 		}
-		m_sndFile.seek(m_currPositionInFrames, SEEK_SET);
+		snd_file_.seek(curr_position_frames_, SEEK_SET);
 
 		Stop();
 
 		int err;
-		std::stringstream errDesc;
-		if( (err = snd_pcm_prepare(m_alsaPlaybackHandle)) < 0 ) {
-			errDesc << "snd_pcm_prepare failed (" << snd_strerror(err) << ")";
-			throw std::runtime_error(errDesc.str());
+		std::stringstream err_desc;
+		if( (err = snd_pcm_prepare(alsa_playback_handle_)) < 0 ) {
+			err_desc << "snd_pcm_prepare failed (" << snd_strerror(err) << ")";
+			throw std::runtime_error(err_desc.str());
 		}
 
-		m_shouldBePlaying = true;
-		m_playingThread = new std::thread(&AlsaFramesTransfer::TransferFramesWrapper, this);
+		logger_->info("start playing file {} from position {} mili-seconds ({} seconds)", file_id_, position_in_ms, position_in_seconds);
+		should_be_playing_ = true;
+		playing_thread_ = std::thread(&AlsaFramesTransfer::TransferFramesWrapper, this);
 	}
 
 	void AlsaFramesTransfer::Stop() {
-		std::cout << "stop is called on current alsa player (for the current song)." << std::endl;
-		m_statusReporter->NoSongPlayingStatus();
-		m_shouldBePlaying = false;
-		if(m_playingThread != nullptr) {
-			m_playingThread->join();
-			delete m_playingThread;
-			m_playingThread = nullptr;
+		should_be_playing_ = false;
+		if(playing_thread_.joinable()) {
+			playing_thread_.join();
 		}
-		m_songStartTimeMsSinceEphoc = 0; // invalidate old start time so on next play a new status will be sent
+		audio_start_time_ms_since_epoch_ = 0; // invalidate old start time so on next play a new status will be sent
 	}
 
-	void AlsaFramesTransfer::LoadNewFile(const std::string &fullPath, const std::string &fileId) {
+	void AlsaFramesTransfer::LoadNewFile(const std::string &full_file_name, const std::string &file_id) {
 
-		if(!m_initialized) {
+		if(!initialized_) {
 			throw std::runtime_error("LoadNewFile called but player not initilized");
 		}
 
 		this->Stop();
 
 		// mark snd as not initialized. after everything goes well, and no exception is thrown, it will be changed to initialized
-		m_sndInitialized = false;
+		snd_initialized_ = false;
 
-		m_fullFileName = fullPath;
-		m_fileId = fileId;
+		full_file_name_ = full_file_name;
+		file_id_ = file_id;
 		InitSndFile();	
 		InitAlsa();	
 
-		m_sndInitialized = true;
+		snd_initialized_ = true;
 	}
 
 	void AlsaFramesTransfer::InitSndFile() {
 
-		m_sndFile = SndfileHandle(m_fullFileName);
-		if(m_sndFile.error() != 0) {
+		snd_file_ = SndfileHandle(full_file_name_);
+		if(snd_file_.error() != 0) {
 			std::stringstream errorDesc;
-			errorDesc << "The file '" << m_fullFileName << "' cannot be opened. error msg: '" << m_sndFile.strError() << "'";
+			errorDesc << "The file '" << full_file_name_ << "' cannot be opened. error msg: '" << snd_file_.strError() << "'";
 			throw std::runtime_error(errorDesc.str());
 		}
 
 		// set the parameters from read from the SndFile and produce log messages
 
-		// sample rate
-		m_frameRate = m_sndFile.samplerate();
-		std::cout << "Frame rate (samples per seconds) is: " << m_frameRate << std::endl;
+		frame_rate_ = snd_file_.samplerate();
+		num_of_channels_ = snd_file_.channels();
 
-		// channels
-		m_channels = m_sndFile.channels();
-		std::cout << "Number of channels in each sample is: " << m_channels << std::endl;
+		int major_type = snd_file_.format() & SF_FORMAT_TYPEMASK;
+		int minor_type = snd_file_.format() & SF_FORMAT_SUBMASK;
 
-		int majorType = m_sndFile.format() & SF_FORMAT_TYPEMASK;
-		int minorType = m_sndFile.format() & SF_FORMAT_SUBMASK;
-		std::cout << "wav format. major: 0x" << std::hex << majorType << " minor: 0x" << std::hex << minorType << std::dec << std::endl;
-
-		switch(minorType) {
+		switch(minor_type) {
 			case SF_FORMAT_PCM_S8: 
-				m_sampleChannelSizeBytes = 1;
-				m_sampleType = SampleTypeSigned;
+				bytes_per_sample_ = 1;
+				sample_type_ = SampleTypeSigned;
 				break;
 			case SF_FORMAT_PCM_16: 
-				m_sampleChannelSizeBytes = 2;
-				m_sampleType = SampleTypeSigned;
+				bytes_per_sample_ = 2;
+				sample_type_ = SampleTypeSigned;
 				break;
 			case SF_FORMAT_PCM_24: 
-				m_sampleChannelSizeBytes = 3;
-				m_sampleType = SampleTypeSigned;
+				bytes_per_sample_ = 3;
+				sample_type_ = SampleTypeSigned;
 				break;
 			case SF_FORMAT_PCM_32: 
-				m_sampleChannelSizeBytes = 4;
-				m_sampleType = SampleTypeSigned;
+				bytes_per_sample_ = 4;
+				sample_type_ = SampleTypeSigned;
 				break;
 			case SF_FORMAT_FLOAT:
-				m_sampleChannelSizeBytes = 4;
-				m_sampleType = SampleTypeFloat;
+				bytes_per_sample_ = 4;
+				sample_type_ = SampleTypeFloat;
 				break;
 			case SF_FORMAT_DOUBLE:
-				m_sampleChannelSizeBytes = 8;
-				m_sampleType = SampleTypeFloat;
+				bytes_per_sample_ = 8;
+				sample_type_ = SampleTypeFloat;
 				break;
 			default:
-				std::stringstream errDesc;
-				errDesc << "wav file is in unsupported format. minor format as read from sndFile is: " << std::hex << minorType;
-				throw std::runtime_error(errDesc.str());
+				std::stringstream err_desc;
+				err_desc << "wav file is in unsupported format. minor format as read from sndFile is: " << std::hex << minor_type;
+				throw std::runtime_error(err_desc.str());
 		}
 
-		switch(majorType) {
+		switch(major_type) {
 			case SF_FORMAT_WAV:
-				m_isEndianLittle = true;
+				is_endian_little_ = true;
 				break;
 			case SF_FORMAT_AIFF:
-				m_isEndianLittle = false;
+				is_endian_little_ = false;
 				break;
 			default:
-				std::stringstream errDesc;
-				errDesc << "wav file is in unsupported format. major format as read from sndFile is: " << std::hex << majorType;
-				throw std::runtime_error(errDesc.str());
+				std::stringstream err_desc;
+				err_desc << "wav file is in unsupported format. major format as read from sndFile is: " << std::hex << major_type;
+				throw std::runtime_error(err_desc.str());
 		}
 
-		std::cout << "each sample's channel is a " << m_sampleChannelSizeBytes << " bytes ";
-		switch(m_sampleType) {
-	    	case SampleTypeSigned: std::cout << "signed integer"; break;
-	    	case SampleTypeUnsigned: std::cout << "unsigned integer"; break;
-	    	case SampleTypeFloat: std::cout << "float"; break;
-		}
-		std::cout << " in " << (m_isEndianLittle ? "little" : "big") << " endian format" << std::endl;
+		total_frame_in_file_ = snd_file_.frames();
+		uint64_t number_of_ms = total_frame_in_file_ * 1000 / frame_rate_;
+		int number_of_minutes = number_of_ms / (1000 * 60);
+		int seconds_modulo = (number_of_ms / 1000) % 60;	
 
-		m_totalFrames = m_sndFile.frames();
-		std::cout << "total frames in file: " << m_totalFrames << " and total time in ms is: " << (m_totalFrames * 1000) / m_frameRate << std::endl;
+		bytes_per_frame_ = num_of_channels_ * bytes_per_sample_;
+		frames_capacity_in_buffer_ = TRANSFER_BUFFER_SIZE / bytes_per_frame_;
 
-		m_bytesPerFrame = m_channels * m_sampleChannelSizeBytes;
-		m_framesCapacityInBuffer = TRANSFER_BUFFER_SIZE / m_bytesPerFrame;
-
-		uint64_t bufferSize = m_totalFrames * (uint64_t)m_channels * (uint64_t)m_sampleChannelSizeBytes;
+		logger_->info("finished reading audio file '{}'. "
+			"Frame rate: {} frames per seconds, "
+			"Number of channels: {}, "
+			"Wav format: major 0x{:x}, minor 0x{:x}, "
+			"Bytes per sample: {}, "
+			"Sample type: '{}', "
+			"Endian: '{}', "
+			"Total frames in file: {} which are: {} ms, and {}:{} minutes", 
+				full_file_name_, frame_rate_, num_of_channels_, major_type, minor_type, bytes_per_sample_, 
+				SampleTypeToString(sample_type_), 
+				(is_endian_little_ ? "little" : "big"),
+				total_frame_in_file_, number_of_ms, number_of_minutes, seconds_modulo
+			);
 	}
 
-	bool AlsaFramesTransfer::GetFormatForAlsa(snd_pcm_format_t &outFormat) {
-		switch(m_sampleType) {
+	bool AlsaFramesTransfer::GetFormatForAlsa(snd_pcm_format_t &out_format) const {
+		switch(sample_type_) {
 
 			case SampleTypeSigned: {
-				if(m_isEndianLittle) {
-					switch(m_sampleChannelSizeBytes) {
-						case 1: outFormat = SND_PCM_FORMAT_S8; return true;
-						case 2: outFormat = SND_PCM_FORMAT_S16_LE; return true;
-						case 3: outFormat = SND_PCM_FORMAT_S24_LE; return true;
-						case 4: outFormat = SND_PCM_FORMAT_S32_LE; return true;
+				if(is_endian_little_) {
+					switch(bytes_per_sample_) {
+						case 1: out_format = SND_PCM_FORMAT_S8; return true;
+						case 2: out_format = SND_PCM_FORMAT_S16_LE; return true;
+						case 3: out_format = SND_PCM_FORMAT_S24_LE; return true;
+						case 4: out_format = SND_PCM_FORMAT_S32_LE; return true;
 					}
 				}
 				else {
-					switch(m_sampleChannelSizeBytes) {
-						case 1: outFormat = SND_PCM_FORMAT_S8; return true;
-						case 2: outFormat = SND_PCM_FORMAT_S16_BE; return true;
-						case 3: outFormat = SND_PCM_FORMAT_S24_BE; return true;
-						case 4: outFormat = SND_PCM_FORMAT_S32_BE; return true;
+					switch(bytes_per_sample_) {
+						case 1: out_format = SND_PCM_FORMAT_S8; return true;
+						case 2: out_format = SND_PCM_FORMAT_S16_BE; return true;
+						case 3: out_format = SND_PCM_FORMAT_S24_BE; return true;
+						case 4: out_format = SND_PCM_FORMAT_S32_BE; return true;
 					}
 				}
 			}
 			break;
 
 			case SampleTypeUnsigned: {
-				if(m_isEndianLittle) {
-					switch(m_sampleChannelSizeBytes) {
-						case 1: outFormat = SND_PCM_FORMAT_U8; return true;
-						case 2: outFormat = SND_PCM_FORMAT_U16_LE; return true;
-						case 3: outFormat = SND_PCM_FORMAT_U24_LE; return true;
-						case 4: outFormat = SND_PCM_FORMAT_U32_LE; return true;
+				if(is_endian_little_) {
+					switch(bytes_per_sample_) {
+						case 1: out_format = SND_PCM_FORMAT_U8; return true;
+						case 2: out_format = SND_PCM_FORMAT_U16_LE; return true;
+						case 3: out_format = SND_PCM_FORMAT_U24_LE; return true;
+						case 4: out_format = SND_PCM_FORMAT_U32_LE; return true;
 					}
 				}
 				else {
-					switch(m_sampleChannelSizeBytes) {
-						case 1: outFormat = SND_PCM_FORMAT_U8; return true;
-						case 2: outFormat = SND_PCM_FORMAT_U16_BE; return true;
-						case 3: outFormat = SND_PCM_FORMAT_U24_BE; return true;
-						case 4: outFormat = SND_PCM_FORMAT_U32_BE; return true;
+					switch(bytes_per_sample_) {
+						case 1: out_format = SND_PCM_FORMAT_U8; return true;
+						case 2: out_format = SND_PCM_FORMAT_U16_BE; return true;
+						case 3: out_format = SND_PCM_FORMAT_U24_BE; return true;
+						case 4: out_format = SND_PCM_FORMAT_U32_BE; return true;
 					}
 				}
 			}
 			break;
 
 			case SampleTypeFloat: {
-				if(m_isEndianLittle) {
-					switch(m_sampleChannelSizeBytes) {
-						case 4: outFormat = SND_PCM_FORMAT_FLOAT_LE; return true;
-						case 8: outFormat = SND_PCM_FORMAT_FLOAT64_LE; return true;
+				if(is_endian_little_) {
+					switch(bytes_per_sample_) {
+						case 4: out_format = SND_PCM_FORMAT_FLOAT_LE; return true;
+						case 8: out_format = SND_PCM_FORMAT_FLOAT64_LE; return true;
 					}
 				}
 				else {
-					switch(m_sampleChannelSizeBytes) {
-						case 4: outFormat = SND_PCM_FORMAT_FLOAT_BE; return true;
-						case 8: outFormat = SND_PCM_FORMAT_FLOAT64_BE; return true;
+					switch(bytes_per_sample_) {
+						case 4: out_format = SND_PCM_FORMAT_FLOAT_BE; return true;
+						case 8: out_format = SND_PCM_FORMAT_FLOAT64_BE; return true;
 					}
 				}			
 
@@ -407,99 +410,110 @@ namespace wavplayeralsa {
 	void AlsaFramesTransfer::InitAlsa() {
 
 		int err;
-		std::stringstream errDesc;
+		std::stringstream err_desc;
 
 		// set hw parameters
 
-		snd_pcm_hw_params_t *hwParams;
+		snd_pcm_hw_params_t *hw_params;
 
-		if( (err = snd_pcm_hw_params_malloc(&hwParams)) < 0 ) {
-			errDesc << "cannot allocate hardware parameter structure (" << snd_strerror(err) << ")";
-			throw std::runtime_error(errDesc.str());
+		if( (err = snd_pcm_hw_params_malloc(&hw_params)) < 0 ) {
+			err_desc << "cannot allocate hardware parameter structure (" << snd_strerror(err) << ")";
+			throw std::runtime_error(err_desc.str());
 		}
 
-		if( (err = snd_pcm_hw_params_any(m_alsaPlaybackHandle, hwParams)) < 0) {
-			errDesc << "cannot initialize hardware parameter structure (" << snd_strerror(err) << ")";
-			throw std::runtime_error(errDesc.str());
+		if( (err = snd_pcm_hw_params_any(alsa_playback_handle_, hw_params)) < 0) {
+			err_desc << "cannot initialize hardware parameter structure (" << snd_strerror(err) << ")";
+			throw std::runtime_error(err_desc.str());
 		}
 
-		if( (err = snd_pcm_hw_params_set_access(m_alsaPlaybackHandle, hwParams, SND_PCM_ACCESS_RW_INTERLEAVED)) < 0) {
-			errDesc << "cannot set access type (" << snd_strerror(err) << ")";
-			throw std::runtime_error(errDesc.str());
+		if( (err = snd_pcm_hw_params_set_access(alsa_playback_handle_, hw_params, SND_PCM_ACCESS_RW_INTERLEAVED)) < 0) {
+			err_desc << "cannot set access type (" << snd_strerror(err) << ")";
+			throw std::runtime_error(err_desc.str());
 		}
 
 		snd_pcm_format_t alsaFormat;
 		if(GetFormatForAlsa(alsaFormat) != true) {
-			errDesc << "the wav format is not supported by this player of alsa";
-			throw std::runtime_error(errDesc.str());
+			err_desc << "the wav format is not supported by this player of alsa";
+			throw std::runtime_error(err_desc.str());
 		}
-		if( (err = snd_pcm_hw_params_set_format(m_alsaPlaybackHandle, hwParams, alsaFormat)) < 0) {
-			errDesc << "cannot set sample format (" << snd_strerror(err) << ")";
-			throw std::runtime_error(errDesc.str());
-		}
-
-		if( (err = snd_pcm_hw_params_set_rate(m_alsaPlaybackHandle, hwParams, m_frameRate, 0)) < 0) {
-			errDesc << "cannot set sample rate (" << snd_strerror(err) << ")";
-			throw std::runtime_error(errDesc.str());
+		if( (err = snd_pcm_hw_params_set_format(alsa_playback_handle_, hw_params, alsaFormat)) < 0) {
+			err_desc << "cannot set sample format (" << snd_strerror(err) << ")";
+			throw std::runtime_error(err_desc.str());
 		}
 
-		if( (err = snd_pcm_hw_params_set_channels(m_alsaPlaybackHandle, hwParams, m_channels)) < 0) {
-			errDesc << "cannot set channel count (" << snd_strerror(err) << ")";
-			throw std::runtime_error(errDesc.str());
+		if( (err = snd_pcm_hw_params_set_rate(alsa_playback_handle_, hw_params, frame_rate_, 0)) < 0) {
+			err_desc << "cannot set sample rate (" << snd_strerror(err) << ")";
+			throw std::runtime_error(err_desc.str());
 		}
 
-		if( (err = snd_pcm_hw_params(m_alsaPlaybackHandle, hwParams)) < 0) {
-			errDesc << "cannot set alsa hw parameters (" << snd_strerror(err) << ")";
-			throw std::runtime_error(errDesc.str());
+		if( (err = snd_pcm_hw_params_set_channels(alsa_playback_handle_, hw_params, num_of_channels_)) < 0) {
+			err_desc << "cannot set channel count (" << snd_strerror(err) << ")";
+			throw std::runtime_error(err_desc.str());
 		}
 
-		snd_pcm_hw_params_free(hwParams);
-		hwParams = NULL;
+		if( (err = snd_pcm_hw_params(alsa_playback_handle_, hw_params)) < 0) {
+			err_desc << "cannot set alsa hw parameters (" << snd_strerror(err) << ")";
+			throw std::runtime_error(err_desc.str());
+		}
+
+		snd_pcm_hw_params_free(hw_params);
+		hw_params = nullptr;
 
 
 		// set software parameters
 
-		snd_pcm_sw_params_t *swParams;
+		snd_pcm_sw_params_t *sw_params;
 
-		if( (err = snd_pcm_sw_params_malloc(&swParams)) < 0) {
-			errDesc << "cannot allocate software parameters structure (" << snd_strerror(err) << ")";
-			throw std::runtime_error(errDesc.str());
+		if( (err = snd_pcm_sw_params_malloc(&sw_params)) < 0) {
+			err_desc << "cannot allocate software parameters structure (" << snd_strerror(err) << ")";
+			throw std::runtime_error(err_desc.str());
 		}
 
-		if( (err = snd_pcm_sw_params_current(m_alsaPlaybackHandle, swParams)) < 0) {
-			errDesc << "cannot initialize software parameters structure (" << snd_strerror(err) << ")";
-			throw std::runtime_error(errDesc.str());
+		if( (err = snd_pcm_sw_params_current(alsa_playback_handle_, sw_params)) < 0) {
+			err_desc << "cannot initialize software parameters structure (" << snd_strerror(err) << ")";
+			throw std::runtime_error(err_desc.str());
 		}
 
 		// we transfer frames to alsa buffers, and then call snd_pcm_wait and block until buffer
 		// has more space for next frames.
 		// this parameter is the amount of min availible frames in the buffer that should trigger
 		// alsa to notify us for writing more frames.
-		if( (err = snd_pcm_sw_params_set_avail_min(m_alsaPlaybackHandle, swParams, AVAIL_MIN)) < 0) {
-			errDesc << "cannot set minimum available count (" << snd_strerror(err) << ")";
-			throw std::runtime_error(errDesc.str());
+		if( (err = snd_pcm_sw_params_set_avail_min(alsa_playback_handle_, sw_params, AVAIL_MIN)) < 0) {
+			err_desc << "cannot set minimum available count (" << snd_strerror(err) << ")";
+			throw std::runtime_error(err_desc.str());
 		}	
 
 		// how many frames should be in the buffer before alsa start to play it.
 		// we set to 0 -> means start playing immediately
-		if( (err = snd_pcm_sw_params_set_start_threshold(m_alsaPlaybackHandle, swParams, 0U)) < 0) {
-			errDesc << "cannot set start mode (" << snd_strerror(err) << ")";
-			throw std::runtime_error(errDesc.str());
+		if( (err = snd_pcm_sw_params_set_start_threshold(alsa_playback_handle_, sw_params, 0U)) < 0) {
+			err_desc << "cannot set start mode (" << snd_strerror(err) << ")";
+			throw std::runtime_error(err_desc.str());
 		}	
 
-		if( (err = snd_pcm_sw_params(m_alsaPlaybackHandle, swParams)) < 0) {
-			errDesc << "cannot set software parameters (" << snd_strerror(err) << ")";
-			throw std::runtime_error(errDesc.str());
+		if( (err = snd_pcm_sw_params(alsa_playback_handle_, sw_params)) < 0) {
+			err_desc << "cannot set software parameters (" << snd_strerror(err) << ")";
+			throw std::runtime_error(err_desc.str());
 		}	
 
-		snd_pcm_sw_params_free(swParams);
-		swParams = NULL;
+		snd_pcm_sw_params_free(sw_params);
+		sw_params = nullptr;
 
-		if( (err = snd_pcm_prepare(m_alsaPlaybackHandle)) < 0) {
-			errDesc << "cannot prepare audio interface for use (" << snd_strerror(err) << ")";
-			throw std::runtime_error(errDesc.str());
+		if( (err = snd_pcm_prepare(alsa_playback_handle_)) < 0) {
+			err_desc << "cannot prepare audio interface for use (" << snd_strerror(err) << ")";
+			throw std::runtime_error(err_desc.str());
 		}	
 
+	}
+
+	const char *AlsaFramesTransfer::SampleTypeToString(SampleType sample_type) {
+		switch(sample_type) {
+	    	case SampleTypeSigned: return "signed integer";
+	    	case SampleTypeUnsigned: return "unsigned integer";
+	    	case SampleTypeFloat: return "float";
+		}
+		std::stringstream err_desc;
+		err_desc << "sample type not supported. value is " << (int)sample_type;
+		throw std::runtime_error(err_desc.str());
 	}
 
 

@@ -53,7 +53,6 @@ namespace wavplayeralsa {
 		
 		boost::asio::io_service *main_io_service_;
 		PlayerEventsIfc *player_events_ifc_;
-		std::shared_ptr<spdlog::logger> alsa_frames_transfer_logger_;				
 
 	};
 

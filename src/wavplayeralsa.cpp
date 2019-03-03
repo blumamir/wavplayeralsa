@@ -3,8 +3,7 @@
 #include <iostream>
 #include <iomanip>
 #include <sstream>
-#include <unistd.h>
-#include <linux/limits.h>
+#include <cstdint>
 
 #include <boost/asio.hpp>
 #include <boost/filesystem.hpp>
@@ -34,15 +33,13 @@ public:
 	}
 
 	void CommandLineArguments(int argc, char *argv[]) {
-		// current directory
-		char cwdCharArr[PATH_MAX];
-		getcwd(cwdCharArr, sizeof(cwdCharArr));
 
+		const std::string current_working_directory = boost::filesystem::current_path().string();
 
 		cxxopts::Options options("wavplayeralsa", "wav files player with accurate position in audio tracking.");
 		options.add_options()
 			("f,initial_file", "file which will be played on run", cxxopts::value<std::string>())
-			("d,wav_dir", "the directory in which wav files are located", cxxopts::value<std::string>()->default_value(cwdCharArr))
+			("d,wav_dir", "the directory in which wav files are located", cxxopts::value<std::string>()->default_value(current_working_directory))
 			("ws_listen_port", "port on which player listen for websocket clients, to send internal event updates", cxxopts::value<uint16_t>()->default_value("9002"))
 			("http_listen_port", "port on which player listen for http clients, to receive external commands and send state", cxxopts::value<uint16_t>()->default_value("8080"))
 			("log_dir", "directory for log file (directory must exist, will not be created)", cxxopts::value<std::string>())
@@ -60,6 +57,8 @@ public:
 			}
 
 			// parse options
+			// see https://github.com/jarro2783/cxxopts/issues/146 for explnation why it has to be done like this (accessed in the try block)
+			// if the issue is fixed in the future, code can be refactored so that access to arguments is done where they are needed
 			save_logs_to_file_ = (cmd_line_parameters.count("log_dir") > 0);
 			if(save_logs_to_file_) {
 				log_dir_ = cmd_line_parameters["log_dir"].as<std::string>();
