@@ -1,1 +1,0 @@
-./bin/wavplayeralsa -d wavs
