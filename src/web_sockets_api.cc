@@ -1,10 +1,8 @@
 #include "web_sockets_api.h"
 
 #include <boost/foreach.hpp>
+#include <boost/bind.hpp>
 
-using websocketpp::lib::placeholders::_1;
-using websocketpp::lib::placeholders::_2;
-using websocketpp::lib::bind;
 using websocketpp::connection_hdl;
 
 using json = nlohmann::json;
@@ -12,16 +10,24 @@ using json = nlohmann::json;
 
 namespace wavplayeralsa {
 
+	WebSocketsApi::~WebSocketsApi() {
+		if(msg_throttle_timer_ != nullptr) {
+			delete msg_throttle_timer_;
+			msg_throttle_timer_ = nullptr;
+		}
+	}
 
 	void WebSocketsApi::Initialize(std::shared_ptr<spdlog::logger> logger, boost::asio::io_service *io_service, uint16_t ws_listen_port) {
 
 		logger_ = logger;
+		io_service_ = io_service;
+		msg_throttle_timer_ = new boost::asio::deadline_timer(*io_service);
 
 	    server_.clear_error_channels(websocketpp::log::alevel::all);
 	    server_.clear_access_channels(websocketpp::log::alevel::all);
 	    server_.init_asio(io_service);
-	    server_.set_open_handler(bind(&WebSocketsApi::OnOpen,this, _1));
-    	server_.set_close_handler(bind(&WebSocketsApi::OnClose,this, _1));
+	    server_.set_open_handler(websocketpp::lib::bind(&WebSocketsApi::OnOpen,this, websocketpp::lib::placeholders::_1));
+    	server_.set_close_handler(websocketpp::lib::bind(&WebSocketsApi::OnClose,this, websocketpp::lib::placeholders::_1));
     	try {
 	    	server_.listen(ws_listen_port);
 	    }
@@ -61,14 +67,23 @@ namespace wavplayeralsa {
 		}
 
 		last_status_msg_ = msg_json_str;
-		logger_->info("new status message: {}. will send to all {} connected clients", last_status_msg_, connections_.size());
-		SendToAllConnectedClients();			
+		if(!has_active_timer_) {
+			msg_throttle_timer_->expires_from_now(boost::posix_time::milliseconds(THROTTLE_WAIT_TIME_MS));
+			msg_throttle_timer_->async_wait(boost::bind(&WebSocketsApi::SendToAllConnectedClients, this, _1));			
+			has_active_timer_ = true;
+		}
 	}
 
-	void WebSocketsApi::SendToAllConnectedClients() {
+	void WebSocketsApi::SendToAllConnectedClients(const boost::system::error_code &e) {
+		if(e) {
+			return;
+		}
+
+		logger_->info("new status message: {}. will send to all {} connected clients", last_status_msg_, connections_.size());
 		BOOST_FOREACH(const connection_hdl &hdl, connections_) {
 	        server_.send(hdl, last_status_msg_, websocketpp::frame::opcode::text);
-		}			
+		}
+		has_active_timer_ = false;
 	}
 
     void WebSocketsApi::OnOpen(connection_hdl hdl) {
@@ -86,3 +101,6 @@ namespace wavplayeralsa {
     }
 
 }
+
+
+

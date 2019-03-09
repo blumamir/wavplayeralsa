@@ -98,7 +98,6 @@ namespace wavplayeralsa {
 		try {
 			FramesToPcmTransferLoop();
 			PcmDrainLoop();
-			logger_->info("playing audio file ended successfully (transfered all frames to pcm and it is empty)");
 		}
 		catch(const std::runtime_error &e) {
 			logger_->error("error while playing current wav file. stopped transfering frames to alsa. exception is: {}", e.what());
@@ -114,11 +113,7 @@ namespace wavplayeralsa {
 		while(true) {
 
 			if(should_be_playing_ == false) {
-				logger_->info("will stop transfering frames to alsa, and drop current frames from pcm");
-				if( (err = snd_pcm_drop(alsa_playback_handle_)) < 0 ) {
-					err_desc << "snd_pcm_drop failed (" << snd_strerror(err) << ")";
-					throw std::runtime_error(err_desc.str());
-				}
+				// if we need to stop playing, just return. droping the frames from the pcm will be done later
 				return;
 			}
 
@@ -186,11 +181,11 @@ namespace wavplayeralsa {
 
 			bool is_currently_playing = IsAlsaStatePlaying();
 
-			if(!is_currently_playing) {
-				logger_->info("playing audio file ended successfully (transfered all frames to pcm and it is empty)");
-			}
-			else if(should_be_playing_ == false) {
+			if(should_be_playing_ == false) {
 				logger_->info("will stop transfering frames to alsa, and drop current frames from pcm");
+			}
+			else if(!is_currently_playing) {
+				logger_->info("playing audio file ended successfully (transfered all frames to pcm and it is empty)");
 			}
 
 			if(!is_currently_playing || should_be_playing_ == false) {
