@@ -22,6 +22,8 @@ namespace wavplayeralsa {
 
 	private:
 		void OnPutCurrentSong(std::shared_ptr<HttpServer::Response> response, std::shared_ptr<HttpServer::Request> request);
+		void OnWebGet(std::shared_ptr<HttpServer::Response> response, std::shared_ptr<HttpServer::Request> request);
+		void OnServerError(std::shared_ptr<HttpServer::Request> /*request*/, const SimpleWeb::error_code & ec);
 
 	private:
 		void WriteResponseBadRequest(std::shared_ptr<HttpServer::Response> response, const std::stringstream &err_stream);
