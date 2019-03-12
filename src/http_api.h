@@ -27,6 +27,7 @@ namespace wavplayeralsa {
 
 	private:
 		void WriteResponseBadRequest(std::shared_ptr<HttpServer::Response> response, const std::stringstream &err_stream);
+		void WriteResponseSuccess(std::shared_ptr<HttpServer::Response> response, const std::stringstream &err_stream);
 
 	private:
 		// outside configurartion

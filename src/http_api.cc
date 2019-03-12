@@ -19,7 +19,7 @@ namespace wavplayeralsa {
 
 	  	server_.config.port = http_listen_port;
 	  	server_.io_service = std::shared_ptr<boost::asio::io_service>(io_service);
-		server_.resource["^/current-song$"]["PUT"] = std::bind(&HttpApi::OnPutCurrentSong, this, std::placeholders::_1, std::placeholders::_2);
+		server_.resource["^/api/current-song$"]["PUT"] = std::bind(&HttpApi::OnPutCurrentSong, this, std::placeholders::_1, std::placeholders::_2);
 		server_.default_resource["GET"] = std::bind(&HttpApi::OnWebGet, this, std::placeholders::_1, std::placeholders::_2);
 		server_.on_error = std::bind(&HttpApi::OnServerError, this, std::placeholders::_1, std::placeholders::_2);
 
@@ -41,6 +41,12 @@ namespace wavplayeralsa {
 		std::string err_msg = err_stream.str();
 		*response << "HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\nContent-Length: " << err_msg.size() << "\r\n\r\n" << err_msg;		
 	  	logger_->error("http request failed. returning error string: {}", err_msg);
+	}
+
+	void HttpApi::WriteResponseSuccess(std::shared_ptr<HttpServer::Response> response, const std::stringstream &err_stream) {
+		std::string err_msg = err_stream.str();
+		*response << "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: " << err_msg.size() << "\r\n\r\n" << err_msg;		
+	  	logger_->info("http request succeeded. returning msg: {}", err_msg);		
 	}
 
 	void HttpApi::OnPutCurrentSong(std::shared_ptr<HttpServer::Response> response, std::shared_ptr<HttpServer::Request> request) {
@@ -101,8 +107,7 @@ namespace wavplayeralsa {
 		    return;			
 		}
 
-	    response->write(handler_msg);
-	    logger_->info("http put request for current-song succeeded: {}", handler_msg.str());		
+		WriteResponseSuccess(response, handler_msg);
 	}
 
 	void HttpApi::OnWebGet(std::shared_ptr<HttpServer::Response> response, std::shared_ptr<HttpServer::Request> request) {
@@ -161,7 +166,8 @@ namespace wavplayeralsa {
 
 	void HttpApi::OnServerError(std::shared_ptr<HttpServer::Request> /*request*/, const SimpleWeb::error_code &ec)
 	{
-		logger_->error("http server error");
+		// TODO: find what this error means and how to handle it (print? what values can ec get)
+		// logger_->error("http server error");
 	}
 
 }

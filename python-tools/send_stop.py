@@ -12,7 +12,7 @@ json_req = {}
 json_str = json.dumps(json_req)
 
 connection = http.client.HTTPConnection(results.ip_address, results.port)
-connection.request("PUT", "/current-song", json_str)
+connection.request("PUT", "/api/current-song", json_str)
 response = connection.getresponse()
 print("Status: {} and reason: {}".format(response.status, response.reason))
 print(response.read())

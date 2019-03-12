@@ -36,18 +36,18 @@ By setting `log_dir` command line argument to an existing directory, player will
 Controling the player is done via HTTP interface.
 Player's command line option 'http_listen_port' is used to set the port on which the player listens for control commands and queries.
 
-To play an audio file, send a json to uri http://PLAYE_IP:HTTP_LISTEN_PORT/current-song in the following format:
+To play an audio file, send a json to uri http://PLAYE_IP:HTTP_LISTEN_PORT/api/current-song in the following format:
 `{ "file_id": "path/from/wav/dir/<file_name>.wav", "start_offset_ms":0 }`
 example with curl:
 ```
-curl -X PUT -H "Content-Type: application/json" -d "{\"file_id\": \"<file_name>.wav\", \"start_offset_ms\":0}" "http://127.0.0.1:8080/current-song"
+curl -X PUT -H "Content-Type: application/json" -d "{\"file_id\": \"<file_name>.wav\", \"start_offset_ms\":0}" "http://127.0.0.1:8080/api/current-song"
 ```
 
-To stop an audio file which is currently playing, send a json to uri http://YOUR_IP:HTTP_LISTEN_PORT/current-song with empty or missing 'file_id':
+To stop an audio file which is currently playing, send a json to uri http://YOUR_IP:HTTP_LISTEN_PORT/api/current-song with empty or missing 'file_id':
 `{ "file_id": "" }` or `{}`
 example with curl :
 ```
-curl -X PUT -H "Content-Type: application/json" -d "{}" "http://127.0.0.1:8080/current-song"
+curl -X PUT -H "Content-Type: application/json" -d "{}" "http://127.0.0.1:8080/api/current-song"
 ```
 
 

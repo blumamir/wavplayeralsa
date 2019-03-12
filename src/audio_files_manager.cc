@@ -51,14 +51,22 @@ namespace wavplayeralsa {
 	}
 
 	bool AudioFilesManager::StopPlayRequest(std::stringstream &out_msg) {
+
 		try {
 			alsa_frames_transfer_.Stop();
 		}
 		catch(const std::runtime_error &e) {
-			out_msg << "Unable to stop current song successfully, error: " << e.what();
+			out_msg << "Unable to stop current audio file successfully, error: " << e.what();
 			return false;
 		}
-		out_msg << "current song '" << alsa_frames_transfer_.GetFileId() << "' stopped playing";
+
+		const std::string &current_file_id = alsa_frames_transfer_.GetFileId();
+		if(current_file_id.empty()) {
+			out_msg << "no audio file is being played, so stop had no effect";			
+		}
+		else {
+			out_msg << "current audio file '" << current_file_id << "' stopped playing";
+		}
 		return true;
 	}
 
