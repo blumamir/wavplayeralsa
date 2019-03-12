@@ -1,0 +1,7 @@
+<button (click)="stop()">Stop</button>
+<button (click)="play()">Play</button>
+<div>
+    File to play: <input [(ngModel)]="fileToPlay" />
+</div>
+<tree-root [nodes]="nodes" [options]="options" (activate)="onActivate($event)"></tree-root>
+<div>{{responseText}}</div>
