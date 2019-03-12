@@ -40,6 +40,7 @@ namespace wavplayeralsa {
 		// wavplayeralsa::PlayerActionsIfc
 		bool NewSongRequest(const std::string &file_id, uint64_t start_offset_ms, std::stringstream &out_msg);
 		bool StopPlayRequest(std::stringstream &out_msg);
+		std::list<std::string> QueryFiles();
 
 	public:
 		// wavplayeralsa::PlayerEventsIfc

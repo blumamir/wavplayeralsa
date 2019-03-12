@@ -70,6 +70,20 @@ namespace wavplayeralsa {
 		return true;
 	}
 
+	std::list<std::string> AudioFilesManager::QueryFiles() {
+
+		std::list<std::string> fileIds;
+
+		std::size_t trailing_path_len = wav_dir_.string().length();
+		for ( boost::filesystem::recursive_directory_iterator end, dir(wav_dir_); dir != end; ++dir ) {
+			if(boost::filesystem::is_regular_file(dir->status())) {
+				const boost::filesystem::directory_entry &directory_entry = *dir;
+				fileIds.push_back(directory_entry.path().string().substr(trailing_path_len));				
+			}
+		}
+		return fileIds;
+	}
+
 	void AudioFilesManager::NewSongStatus(const std::string &file_id, uint64_t start_time_millis_since_epoch, double speed) {
 		main_io_service_->post(boost::bind(&PlayerEventsIfc::NewSongStatus, player_events_ifc_, file_id, start_time_millis_since_epoch, speed));
 	}

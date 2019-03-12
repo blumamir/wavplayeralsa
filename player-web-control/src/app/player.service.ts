@@ -14,6 +14,12 @@ export class PlayerService {
     headers: new HttpHeaders({ 'Content-Type': 'application/json' })  
   };
 
+  queryFiles(): Observable<string[]> {
+    return this.http.get("/api/available-files").pipe(
+      map(json => json as string[])
+    );
+  }
+
   stopAudio(): Observable<string> {
 
     const headers = new HttpHeaders().set('Content-Type', 'application/json');

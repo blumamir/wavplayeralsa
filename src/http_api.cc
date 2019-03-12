@@ -3,8 +3,6 @@
 
 #include <boost/filesystem.hpp>
 
-#include "nlohmann/json.hpp"
-
 
 using json = nlohmann::json;
 
@@ -19,6 +17,7 @@ namespace wavplayeralsa {
 
 	  	server_.config.port = http_listen_port;
 	  	server_.io_service = std::shared_ptr<boost::asio::io_service>(io_service);
+		server_.resource["^/api/available-files$"]["GET"] = std::bind(&HttpApi::OnGetAvailableFiles, this, std::placeholders::_1, std::placeholders::_2);
 		server_.resource["^/api/current-song$"]["PUT"] = std::bind(&HttpApi::OnPutCurrentSong, this, std::placeholders::_1, std::placeholders::_2);
 		server_.default_resource["GET"] = std::bind(&HttpApi::OnWebGet, this, std::placeholders::_1, std::placeholders::_2);
 		server_.on_error = std::bind(&HttpApi::OnServerError, this, std::placeholders::_1, std::placeholders::_2);
@@ -43,10 +42,21 @@ namespace wavplayeralsa {
 	  	logger_->error("http request failed. returning error string: {}", err_msg);
 	}
 
-	void HttpApi::WriteResponseSuccess(std::shared_ptr<HttpServer::Response> response, const std::stringstream &err_stream) {
-		std::string err_msg = err_stream.str();
-		*response << "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: " << err_msg.size() << "\r\n\r\n" << err_msg;		
-	  	logger_->info("http request succeeded. returning msg: {}", err_msg);		
+	void HttpApi::WriteResponseSuccess(std::shared_ptr<HttpServer::Response> response, const std::stringstream &body_stream) {
+		std::string body = body_stream.str();
+		*response << "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: " << body.size() << "\r\n\r\n" << body;		
+	  	logger_->info("http request succeeded. returning msg: {}", body);
+	}
+
+	void HttpApi::WriteJsonResponseSuccess(std::shared_ptr<HttpServer::Response> response, const json &body_json) {
+		std::string body = body_json.dump();
+		*response << "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: " << body.size() << "\r\n\r\n" << body;		
+	  	logger_->info("http request succeeded. returning msg: {}", body);
+	}
+
+	void HttpApi::OnGetAvailableFiles(std::shared_ptr<HttpServer::Response> response, std::shared_ptr<HttpServer::Request> request) {
+		const std::list<std::string> fileIds = player_action_callback_->QueryFiles();
+		WriteJsonResponseSuccess(response, fileIds);
 	}
 
 	void HttpApi::OnPutCurrentSong(std::shared_ptr<HttpServer::Response> response, std::shared_ptr<HttpServer::Request> request) {

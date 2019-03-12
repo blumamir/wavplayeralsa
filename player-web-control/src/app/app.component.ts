@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { PlayerService } from './player.service'
 
 @Component({
@@ -6,29 +6,20 @@ import { PlayerService } from './player.service'
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css']
 })
-export class AppComponent {
+export class AppComponent implements OnInit {
+
+  ngOnInit(): void {
+    this.playerService.queryFiles().subscribe(
+      filesArr => {
+        this.nodes = [];
+        filesArr.forEach(fileId => this.nodes.push({id: fileId, name: fileId}));
+      }
+    );
+  }
 
   constructor(private playerService: PlayerService) { }
 
-  nodes = [
-    {
-      id: 'toccata.wav',
-      name: 'toccata.wav',
-    },
-    {
-      id: 'mantequilla.wav',
-      name: 'mantequilla.wav',
-    },
-    {
-      id: 'dorothy.wav',
-      name: 'dorothy.wav',
-    },
-    {
-      id: 'mumminim.wav',
-      name: 'mumminim.wav',
-    }
-
-  ];
+  nodes = [];
   options = {};
 
   fileToPlay: string;

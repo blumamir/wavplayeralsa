@@ -7,6 +7,7 @@
 
 #include "simple-web-server/server_http.hpp"
 #include "spdlog/spdlog.h"
+#include "nlohmann/json.hpp"
 
 #include "player_actions_ifc.h"
 
@@ -21,13 +22,15 @@ namespace wavplayeralsa {
 		void Initialize(std::shared_ptr<spdlog::logger> logger, boost::asio::io_service *io_service, PlayerActionsIfc *player_action_callback, uint16_t http_listen_port);
 
 	private:
+		void OnGetAvailableFiles(std::shared_ptr<HttpServer::Response> response, std::shared_ptr<HttpServer::Request> request);
 		void OnPutCurrentSong(std::shared_ptr<HttpServer::Response> response, std::shared_ptr<HttpServer::Request> request);
 		void OnWebGet(std::shared_ptr<HttpServer::Response> response, std::shared_ptr<HttpServer::Request> request);
 		void OnServerError(std::shared_ptr<HttpServer::Request> /*request*/, const SimpleWeb::error_code & ec);
 
 	private:
 		void WriteResponseBadRequest(std::shared_ptr<HttpServer::Response> response, const std::stringstream &err_stream);
-		void WriteResponseSuccess(std::shared_ptr<HttpServer::Response> response, const std::stringstream &err_stream);
+		void WriteResponseSuccess(std::shared_ptr<HttpServer::Response> response, const std::stringstream &body_stream);
+		void WriteJsonResponseSuccess(std::shared_ptr<HttpServer::Response> response, const nlohmann::json &body_json);
 
 	private:
 		// outside configurartion
