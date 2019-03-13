@@ -103,6 +103,8 @@ namespace wavplayeralsa {
 			logger_->error("error while playing current wav file. stopped transfering frames to alsa. exception is: {}", e.what());
 		}
 		player_events_callback_->NoSongPlayingStatus();		
+		should_be_playing_ = false;
+
 	}
 
 	void AlsaFramesTransfer::FramesToPcmTransferLoop() {
@@ -235,21 +237,41 @@ namespace wavplayeralsa {
 		playing_thread_ = std::thread(&AlsaFramesTransfer::TransferFramesWrapper, this);
 	}
 
-	void AlsaFramesTransfer::Stop() {
+	/*
+	stop the current audio file from being played.
+	the following scenarios are possible:
+	1. alsa's pcm is running, transfering frames to the audio device, and the monitoring thread is active
+		and serving frames \ waiting for buffer to drain.
+	2. alsa pcm is drained, not more frames are sent to audio device, and the monitoring thread has finished
+		execution and waiting to be joined.
+	3. the thread has been joined, thus there is noting to stop.
+
+	The function returns true if it's invocation is what made the audio device stop playing (case 1).
+	It will return false if stop is called but the pcm is not running anyway (cases 2, 3)
+	*/
+	bool AlsaFramesTransfer::Stop() {
+
+		// there is a possible race condition here, if we copy the value, and then audio reaches it's end,
+		// but that is ok for our use (we don't need a precise indication, just a general idea)
+		bool is_playing = should_be_playing_;
 		should_be_playing_ = false;
 		if(playing_thread_.joinable()) {
 			playing_thread_.join();
 		}
 		audio_start_time_ms_since_epoch_ = 0; // invalidate old start time so on next play a new status will be sent
+		return is_playing; // if we were playing when we entered the function, then the invocation is what made it stop
 	}
 
-	void AlsaFramesTransfer::LoadNewFile(const std::string &full_file_name, const std::string &file_id) {
+	/*
+	return true if loading a new file caused the current audio to 'stop', return false if no file was playing anyway.
+	*/
+	bool AlsaFramesTransfer::LoadNewFile(const std::string &full_file_name, const std::string &file_id) {
 
 		if(!initialized_) {
 			throw std::runtime_error("LoadNewFile called but player not initilized");
 		}
 
-		this->Stop();
+		bool was_playing = this->Stop();
 
 		// mark snd as not initialized. after everything goes well, and no exception is thrown, it will be changed to initialized
 		snd_initialized_ = false;
@@ -260,6 +282,8 @@ namespace wavplayeralsa {
 		InitAlsa();	
 
 		snd_initialized_ = true;
+
+		return was_playing;
 	}
 
 	void AlsaFramesTransfer::InitSndFile() {

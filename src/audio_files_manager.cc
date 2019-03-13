@@ -1,5 +1,7 @@
 #include "audio_files_manager.h"
 
+#include <iomanip>
+
 namespace wavplayeralsa {
 
 	void AudioFilesManager::Initialize(std::shared_ptr<spdlog::logger> alsa_frames_transfer_logger, 
@@ -35,9 +37,26 @@ namespace wavplayeralsa {
 			}
 
 			try {
-				alsa_frames_transfer_.LoadNewFile(canonicalFullPath, file_id);
-				out_msg << "song successfully changed to '" << file_id << "'. " <<
-						"new audio file will start playing at position " << start_offset_ms << " ms";
+				const std::string prev_file = alsa_frames_transfer_.GetFileId();
+				bool prev_file_was_playing = alsa_frames_transfer_.LoadNewFile(canonicalFullPath, file_id);
+
+				// message printing
+				const int SECONDS_PER_HOUR = (60 * 60);
+				uint64_t start_offset_sec = start_offset_ms / 1000;
+				uint64_t hours = start_offset_sec / SECONDS_PER_HOUR;
+				start_offset_sec = start_offset_sec - hours * SECONDS_PER_HOUR;
+				uint64_t minutes = start_offset_sec / 60;
+				uint64_t seconds = start_offset_sec % 60;
+				if(prev_file_was_playing && !prev_file.empty()) {
+					out_msg << "audio file successfully changed from '" << prev_file << "' to '" << file_id << "' and will be played ";
+				}
+				else {
+					out_msg << "will play audio file '" << file_id << "' ";
+				}
+				out_msg << "starting at position " << start_offset_ms << " ms " <<
+					"(" << hours << ":" << 
+					std::setfill('0') << std::setw(2) << minutes << ":" << 
+					std::setfill('0') << std::setw(2) << seconds << ")";
 			}
 			catch(const std::runtime_error &e) {
 				out_msg << "loading new audio file '" << file_id << "' failed. currently no audio file is loaded in the player and it is not playing. " <<
@@ -52,8 +71,9 @@ namespace wavplayeralsa {
 
 	bool AudioFilesManager::StopPlayRequest(std::stringstream &out_msg) {
 
+		bool was_playing = false;
 		try {
-			alsa_frames_transfer_.Stop();
+			was_playing = alsa_frames_transfer_.Stop();
 		}
 		catch(const std::runtime_error &e) {
 			out_msg << "Unable to stop current audio file successfully, error: " << e.what();
@@ -61,11 +81,11 @@ namespace wavplayeralsa {
 		}
 
 		const std::string &current_file_id = alsa_frames_transfer_.GetFileId();
-		if(current_file_id.empty()) {
+		if(current_file_id.empty() || !was_playing) {
 			out_msg << "no audio file is being played, so stop had no effect";			
 		}
 		else {
-			out_msg << "current audio file '" << current_file_id << "' stopped playing";
+			out_msg << "current audio file '" << current_file_id << "' stopped playing";				
 		}
 		return true;
 	}

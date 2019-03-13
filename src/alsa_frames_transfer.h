@@ -82,9 +82,9 @@ namespace wavplayeralsa {
 		// what should *NOT* be used as fileId is: ../../songs/beep.wav songs//beep.wav ./beep.wav
 		// it should be canonical, so that each file is always identify uniquely
 		const std::string &GetFileId() const;
-		void LoadNewFile(const std::string &full_file_name, const std::string &file_id);
+		bool LoadNewFile(const std::string &full_file_name, const std::string &file_id);
 		void StartPlay(uint32_t position_in_ms);
-		void Stop();
+		bool Stop();
 
 	private:
 		void InitSndFile();
