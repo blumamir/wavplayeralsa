@@ -116,6 +116,7 @@ public:
 
 			http_api_logger_ = root_logger_->clone("http_api");
 			ws_api_logger_ = root_logger_->clone("ws_api");
+			mqtt_api_logger_ = root_logger_->clone("mqtt_api");
 			alsa_frames_transfer_logger_ = root_logger_->clone("alsa_frames_transfer");
 		}
 		catch(const std::exception &e) {

@@ -12,24 +12,19 @@ namespace wavplayeralsa {
 		player_action_callback_ = player_action_callback;
 		logger_ = logger;
 
+		const char *mqtt_client_id = "wavplayeralsa";
+		logger_->info("creating mqtt connection to host {} on port {} with client id {}", mqtt_host, mqtt_port, mqtt_client_id);
+		logger_->info("will publish current song updates on topic {}", CURRENT_SONG_TOPIC);
+
     	mqtt_client_ = mqtt::make_sync_client(*io_service, mqtt_host, mqtt_port);
-        mqtt_client_->set_client_id("cid1");
+        mqtt_client_->set_client_id(mqtt_client_id);
 	    mqtt_client_->set_clean_session(true);
 
 	    mqtt_client_->set_connack_handler(
 	        // [&c, &pid_sub1, &pid_sub2]
 	        [this]
 	        (bool sp, std::uint8_t connack_return_code){
-	            std::cout << "Connack handler called" << std::endl;
-	            std::cout << "Clean Session: " << std::boolalpha << sp << std::endl;
-	            std::cout << "Connack Return Code: "
-	                      << mqtt::connect_return_code_to_str(connack_return_code) << std::endl;
-	            this->mqtt_client_->publish_exactly_once("test", "test2_2");
-	            // if (connack_return_code == mqtt::connect_return_code::accepted) {
-	            //     pid_sub1 = c->subscribe("mqtt_client_cpp/topic1", mqtt::qos::at_most_once);
-	            //     pid_sub2 = c->subscribe("mqtt_client_cpp/topic2_1", mqtt::qos::at_least_once,
-	            //                            "mqtt_client_cpp/topic2_2", mqtt::qos::exactly_once);
-	            // }
+	        	logger_->info("connack handler called. clean session: {}. coonack rerturn code: {}", sp, mqtt::connect_return_code_to_str(connack_return_code));
 	            return true;
 	        });	    
 
@@ -63,7 +58,7 @@ namespace wavplayeralsa {
 		}
 
 		last_status_msg_ = msg_json_str;		
-	    this->mqtt_client_->publish_exactly_once("current-song", last_status_msg_);
+	    this->mqtt_client_->publish_exactly_once(CURRENT_SONG_TOPIC, last_status_msg_);
 	}
 
 }

@@ -13,6 +13,9 @@
 #include "player_actions_ifc.h"
 #include "player_events_ifc.h"
 
+#ifndef CURRENT_SONG_TOPIC
+#define CURRENT_SONG_TOPIC "current-song"
+#endif // CURRENT_SONG_TOPIC
 
 namespace wavplayeralsa {
 
