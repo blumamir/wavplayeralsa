@@ -34,7 +34,8 @@ namespace wavplayeralsa {
 
 	public:
 
-		void Initialize(std::shared_ptr<spdlog::logger> alsa_frames_transfer_logger, boost::asio::io_service *main_io_service, PlayerEventsIfc *player_events_ifc, const std::string &wav_dir, const std::string &audio_device);
+		void Initialize(std::shared_ptr<spdlog::logger> alsa_frames_transfer_logger, boost::asio::io_service *main_io_service, const std::string &wav_dir, const std::string &audio_device);
+		void RegisterPlayerEventsHandler(PlayerEventsIfc *player_events_ifc);
 
 	public:
 		// wavplayeralsa::PlayerActionsIfc
@@ -53,7 +54,7 @@ namespace wavplayeralsa {
 		AlsaFramesTransfer alsa_frames_transfer_;
 		
 		boost::asio::io_service *main_io_service_;
-		PlayerEventsIfc *player_events_ifc_;
+		std::vector<PlayerEventsIfc *> player_events_ifc_;
 
 	};
 

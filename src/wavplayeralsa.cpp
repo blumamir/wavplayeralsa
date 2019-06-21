@@ -15,6 +15,7 @@
 
 #include "web_sockets_api.h"
 #include "http_api.h"
+#include "mqtt_api.h"
 #include "alsa_frames_transfer.h"
 #include "audio_files_manager.h"
 
@@ -42,6 +43,8 @@ public:
 			("d,wav_dir", "the directory in which wav files are located", cxxopts::value<std::string>()->default_value(current_working_directory))
 			("ws_listen_port", "port on which player listen for websocket clients, to send internal event updates", cxxopts::value<uint16_t>()->default_value("9002"))
 			("http_listen_port", "port on which player listen for http clients, to receive external commands and send state", cxxopts::value<uint16_t>()->default_value("8080"))
+			("mqtt_host", "host for the mqtt message broker", cxxopts::value<std::string>())
+			("mqtt_port", "port on which mqtt message broker listen for client connections", cxxopts::value<uint16_t>()->default_value("1883"))
 			("log_dir", "directory for log file (directory must exist, will not be created)", cxxopts::value<std::string>())
 			("audio_device", "audio device for playback. can be string like 'plughw:0,0'. use 'aplay -l' to list available devices", cxxopts::value<std::string>()->default_value("default"))
 			("h, help", "print help")
@@ -68,6 +71,10 @@ public:
 			}
 			ws_listen_port_ = cmd_line_parameters["ws_listen_port"].as<uint16_t>();
 			http_listen_port_ = cmd_line_parameters["http_listen_port"].as<uint16_t>();
+			if(cmd_line_parameters.count("mqtt_host") > 0) {
+				mqtt_host_ = cmd_line_parameters["mqtt_host"].as<std::string>();
+				mqtt_port_ = cmd_line_parameters["mqtt_port"].as<uint16_t>();
+			}
 			wav_dir_ = cmd_line_parameters["wav_dir"].as<std::string>();
 			audio_device_ = cmd_line_parameters["audio_device"].as<std::string>();
 
@@ -120,9 +127,16 @@ public:
 	// can throw exception
 	void InitializeComponents() {
 		try {
+			audio_files_manager.Initialize(alsa_frames_transfer_logger_, &io_service_, wav_dir_, audio_device_);
 			web_sockets_api_.Initialize(ws_api_logger_, &io_service_, ws_listen_port_);
 			http_api_.Initialize(http_api_logger_, &io_service_, &audio_files_manager, http_listen_port_);
-			audio_files_manager.Initialize(alsa_frames_transfer_logger_, &io_service_, &web_sockets_api_, wav_dir_, audio_device_);			
+
+			if(UseMqtt()) {
+				mqtt_api_.Initialize(mqtt_api_logger_, &io_service_, &audio_files_manager, mqtt_host_, mqtt_port_);
+				audio_files_manager.RegisterPlayerEventsHandler(&mqtt_api_);
+			}
+			
+			audio_files_manager.RegisterPlayerEventsHandler(&web_sockets_api_);
 		}
 		catch(const std::exception &e) {
 			root_logger_->critical("failed initialization, unable to start player. {}", e.what());
@@ -144,6 +158,11 @@ public:
 		io_service_.run();
 	}
 
+private:
+
+	bool UseMqtt() {
+		return !mqtt_host_.empty();
+	}
 
 private:
 
@@ -201,6 +220,8 @@ private:
 	std::string initial_file_;
 	uint16_t ws_listen_port_;
 	uint16_t http_listen_port_;
+	std::string mqtt_host_;
+	uint16_t mqtt_port_;
 	std::string wav_dir_;
 	std::string audio_device_;
 
@@ -208,6 +229,7 @@ private:
 	// loggers
 	std::shared_ptr<spdlog::logger> root_logger_;
 	std::shared_ptr<spdlog::logger> http_api_logger_;
+	std::shared_ptr<spdlog::logger> mqtt_api_logger_;
 	std::shared_ptr<spdlog::logger> ws_api_logger_;
 	std::shared_ptr<spdlog::logger> alsa_frames_transfer_logger_;
 
@@ -216,6 +238,7 @@ private:
 	// app components
 	wavplayeralsa::WebSocketsApi web_sockets_api_;
 	wavplayeralsa::HttpApi http_api_;
+	wavplayeralsa::MqttApi mqtt_api_;
 	wavplayeralsa::AudioFilesManager audio_files_manager;
 
 };

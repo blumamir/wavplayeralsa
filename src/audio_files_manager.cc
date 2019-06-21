@@ -2,19 +2,24 @@
 
 #include <iomanip>
 
+#include <boost/foreach.hpp>
+
 namespace wavplayeralsa {
 
 	void AudioFilesManager::Initialize(std::shared_ptr<spdlog::logger> alsa_frames_transfer_logger, 
 			boost::asio::io_service *main_io_service, 
-			PlayerEventsIfc *player_events_ifc, 
 			const std::string &wav_dir, 
 			const std::string &audio_device) 
 	{
 		wav_dir_ = boost::filesystem::path(wav_dir);
 		main_io_service_ = main_io_service;
-		player_events_ifc_ = player_events_ifc;
 
 		alsa_frames_transfer_.Initialize(alsa_frames_transfer_logger, this, audio_device);
+	}
+
+	void AudioFilesManager::RegisterPlayerEventsHandler(PlayerEventsIfc *player_events_ifc)
+	{
+		player_events_ifc_.push_back(player_events_ifc);
 	}
 
 	bool AudioFilesManager::NewSongRequest(const std::string &file_id, uint64_t start_offset_ms, std::stringstream &out_msg) {
@@ -105,11 +110,15 @@ namespace wavplayeralsa {
 	}
 
 	void AudioFilesManager::NewSongStatus(const std::string &file_id, uint64_t start_time_millis_since_epoch, double speed) {
-		main_io_service_->post(boost::bind(&PlayerEventsIfc::NewSongStatus, player_events_ifc_, file_id, start_time_millis_since_epoch, speed));
+		BOOST_FOREACH(PlayerEventsIfc *player_events_ifc, player_events_ifc_) {
+			main_io_service_->post(boost::bind(&PlayerEventsIfc::NewSongStatus, player_events_ifc, file_id, start_time_millis_since_epoch, speed));			
+		}
 	}
 
 	void AudioFilesManager::NoSongPlayingStatus() {
-		main_io_service_->post(boost::bind(&PlayerEventsIfc::NoSongPlayingStatus, player_events_ifc_));		
+		BOOST_FOREACH(PlayerEventsIfc *player_events_ifc, player_events_ifc_) {
+			main_io_service_->post(boost::bind(&PlayerEventsIfc::NoSongPlayingStatus, player_events_ifc));		
+		}
 	}	
 
 }
