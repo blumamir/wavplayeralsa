@@ -7,7 +7,7 @@
 
 #include "simple-web-server/server_http.hpp"
 #include "spdlog/spdlog.h"
-#include "nlohmann/json.hpp"
+#include "nlohmann/json_fwd.hpp"
 
 #include "player_actions_ifc.h"
 

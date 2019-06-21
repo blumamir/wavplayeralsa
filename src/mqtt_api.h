@@ -8,7 +8,7 @@
 #include "spdlog/spdlog.h"
 #define MQTT_NO_TLS
 #include "mqtt_cpp/mqtt_client_cpp.hpp"
-#include "nlohmann/json.hpp"
+#include "nlohmann/json_fwd.hpp"
 
 #include "player_actions_ifc.h"
 #include "player_events_ifc.h"

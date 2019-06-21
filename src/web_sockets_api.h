@@ -5,13 +5,12 @@
 #include <set>
 
 #include <boost/asio.hpp>
-#include "nlohmann/json.hpp"
 #include "websocketpp/config/asio_no_tls.hpp"
 #include "websocketpp/server.hpp"
 #include "spdlog/spdlog.h"
+#include "nlohmann/json_fwd.hpp"
 
 #include "player_events_ifc.h"
-
 
 namespace wavplayeralsa {
 

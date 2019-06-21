@@ -3,6 +3,9 @@
 #include <boost/foreach.hpp>
 #include <boost/bind.hpp>
 
+#include "nlohmann/json.hpp"
+
+
 using websocketpp::connection_hdl;
 
 using json = nlohmann::json;

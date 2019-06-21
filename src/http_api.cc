@@ -2,6 +2,7 @@
 #include "http_api.h"
 
 #include <boost/filesystem.hpp>
+#include "nlohmann/json.hpp"
 
 
 using json = nlohmann::json;
