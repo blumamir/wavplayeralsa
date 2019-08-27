@@ -115,9 +115,9 @@ namespace wavplayeralsa {
 		}
 	}
 
-	void AudioFilesManager::NoSongPlayingStatus() {
+	void AudioFilesManager::NoSongPlayingStatus(const std::string &file_id) {
 		BOOST_FOREACH(PlayerEventsIfc *player_events_ifc, player_events_ifc_) {
-			main_io_service_->post(boost::bind(&PlayerEventsIfc::NoSongPlayingStatus, player_events_ifc));		
+			main_io_service_->post(boost::bind(&PlayerEventsIfc::NoSongPlayingStatus, player_events_ifc, file_id));		
 		}
 	}	
 

@@ -53,9 +53,10 @@ namespace wavplayeralsa {
 		UpdateLastStatusMsg(j);
 	}
 
-	void WebSocketsApi::NoSongPlayingStatus() {
+	void WebSocketsApi::NoSongPlayingStatus(const std::string &file_id) {
 		json j;
 		j["song_is_playing"] = false;
+		j["stopped_file_id"] = file_id;
 		UpdateLastStatusMsg(j);
 	}
 

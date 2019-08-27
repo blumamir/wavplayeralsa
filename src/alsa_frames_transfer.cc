@@ -102,7 +102,7 @@ namespace wavplayeralsa {
 		catch(const std::runtime_error &e) {
 			logger_->error("error while playing current wav file. stopped transfering frames to alsa. exception is: {}", e.what());
 		}
-		player_events_callback_->NoSongPlayingStatus();		
+		player_events_callback_->NoSongPlayingStatus(file_id_);		
 		should_be_playing_ = false;
 
 	}

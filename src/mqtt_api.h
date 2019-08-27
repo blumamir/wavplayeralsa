@@ -26,7 +26,7 @@ namespace wavplayeralsa {
 
 	public:
 		void NewSongStatus(const std::string &file_id, uint64_t start_time_millis_since_epoch, double speed);
-		void NoSongPlayingStatus();
+		void NoSongPlayingStatus(const std::string &file_id);
 
 	private:
 		void UpdateLastStatusMsg(const nlohmann::json &msgJson);

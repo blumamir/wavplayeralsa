@@ -43,10 +43,11 @@ namespace wavplayeralsa {
 		UpdateLastStatusMsg(j);
 	}
 
-	void MqttApi::NoSongPlayingStatus()
+	void MqttApi::NoSongPlayingStatus(const std::string &file_id)
 	{
 		json j;
 		j["song_is_playing"] = false;
+		j["stopped_file_id"] = file_id;
 		UpdateLastStatusMsg(j);
 	}
 
@@ -59,7 +60,7 @@ namespace wavplayeralsa {
 		}
 
 		last_status_msg_ = msg_json_str;		
-	    this->mqtt_client_->publish_exactly_once(CURRENT_SONG_TOPIC, last_status_msg_);
+	    this->mqtt_client_->publish_exactly_once(CURRENT_SONG_TOPIC, last_status_msg_, true);
 	}
 
 }

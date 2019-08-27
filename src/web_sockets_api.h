@@ -25,7 +25,7 @@ namespace wavplayeralsa {
 	public:
 		// PlayerEventsIfc
 		void NewSongStatus(const std::string &file_id, uint64_t start_time_millis_since_epoch, double speed);
-		void NoSongPlayingStatus();
+		void NoSongPlayingStatus(const std::string &file_id);
 
 	private:
 		// handler functions
