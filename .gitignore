@@ -43,3 +43,6 @@ Debug/*
 *.pyc
 */.idea/*
 python-tools/venv/*
+
+# IDE
+.vscode
