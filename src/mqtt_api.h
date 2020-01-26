@@ -4,6 +4,8 @@
 #include <cstdint>
 
 #include <boost/asio.hpp>
+#include <boost/asio/deadline_timer.hpp>
+#include <boost/asio/io_service.hpp>
 
 #include "spdlog/spdlog.h"
 #define MQTT_NO_TLS
@@ -22,7 +24,8 @@ namespace wavplayeralsa {
 	class MqttApi : public PlayerEventsIfc {
 
 	public:
-		void Initialize(std::shared_ptr<spdlog::logger> logger, boost::asio::io_service *io_service, PlayerActionsIfc *player_action_callback, const std::string &mqtt_host, uint16_t mqtt_port);
+		MqttApi(boost::asio::io_service &io_service);
+		void Initialize(std::shared_ptr<spdlog::logger> logger, PlayerActionsIfc *player_action_callback, const std::string &mqtt_host, uint16_t mqtt_port);
 
 	public:
 		void NewSongStatus(const std::string &file_id, uint64_t start_time_millis_since_epoch, double speed);
@@ -32,12 +35,17 @@ namespace wavplayeralsa {
 		void UpdateLastStatusMsg(const nlohmann::json &msgJson);
 
 	private:
-		// outside configurartion
+		const int reconnect_wait_ms = 2000;
+
+	private:
+		// outside services
 		PlayerActionsIfc *player_action_callback_;
 		std::shared_ptr<spdlog::logger> logger_;
+		boost::asio::io_service &io_service_;
 
 	private:
 		std::shared_ptr<mqtt::sync_client<mqtt::tcp_endpoint<mqtt::as::ip::tcp::socket, mqtt::as::io_service::strand>>> mqtt_client_;
+		boost::asio::deadline_timer reconnect_timer_;
 
 		std::string last_status_msg_;
 	};

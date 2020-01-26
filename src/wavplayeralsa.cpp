@@ -28,7 +28,8 @@ class WavPlayerAlsa {
 public:
 
 	WavPlayerAlsa() :
-		io_service_work_(io_service_)
+		io_service_work_(io_service_),
+		mqtt_api_(io_service_)
 	{
 
 	}
@@ -133,7 +134,7 @@ public:
 			http_api_.Initialize(http_api_logger_, &io_service_, &audio_files_manager, http_listen_port_);
 
 			if(UseMqtt()) {
-				mqtt_api_.Initialize(mqtt_api_logger_, &io_service_, &audio_files_manager, mqtt_host_, mqtt_port_);
+				mqtt_api_.Initialize(mqtt_api_logger_, &audio_files_manager, mqtt_host_, mqtt_port_);
 				audio_files_manager.RegisterPlayerEventsHandler(&mqtt_api_);
 			}
 			
