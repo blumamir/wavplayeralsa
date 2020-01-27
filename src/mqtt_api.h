@@ -10,10 +10,8 @@
 #include "spdlog/spdlog.h"
 #define MQTT_NO_TLS
 #include "mqtt_cpp/mqtt_client_cpp.hpp"
-#include "nlohmann/json_fwd.hpp"
 
 #include "player_actions_ifc.h"
-#include "player_events_ifc.h"
 
 #ifndef CURRENT_SONG_TOPIC
 #define CURRENT_SONG_TOPIC "current-song"
@@ -21,18 +19,14 @@
 
 namespace wavplayeralsa {
 
-	class MqttApi : public PlayerEventsIfc {
+	class MqttApi {
 
 	public:
 		MqttApi(boost::asio::io_service &io_service);
 		void Initialize(std::shared_ptr<spdlog::logger> logger, PlayerActionsIfc *player_action_callback, const std::string &mqtt_host, uint16_t mqtt_port);
 
 	public:
-		void NewSongStatus(const std::string &file_id, uint64_t start_time_millis_since_epoch, double speed);
-		void NoSongPlayingStatus(const std::string &file_id);
-
-	private:
-		void UpdateLastStatusMsg(const nlohmann::json &msgJson);
+		void ReportCurrentSong(const std::string &json_str);
 
 	private:
 		const int reconnect_wait_ms = 2000;
@@ -44,7 +38,7 @@ namespace wavplayeralsa {
 		boost::asio::io_service &io_service_;
 
 	private:
-		std::shared_ptr<mqtt::sync_client<mqtt::tcp_endpoint<mqtt::as::ip::tcp::socket, mqtt::as::io_service::strand>>> mqtt_client_;
+		std::shared_ptr<mqtt::sync_client<mqtt::tcp_endpoint<mqtt::as::ip::tcp::socket, mqtt::as::io_service::strand>>> mqtt_client_ = nullptr;
 		boost::asio::deadline_timer reconnect_timer_;
 
 		std::string last_status_msg_;

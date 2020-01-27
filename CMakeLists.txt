@@ -15,6 +15,7 @@ set (SOURCES
 	src/http_api.cc
 	src/mqtt_api.cc
 	src/audio_files_manager.cc
+	src/current_song_controller.cc
 )
 
 set(CMAKE_BUILD_TYPE Debug)

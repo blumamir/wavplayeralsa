@@ -18,6 +18,7 @@
 #include "mqtt_api.h"
 #include "alsa_frames_transfer.h"
 #include "audio_files_manager.h"
+#include "current_song_controller.h"
 
 
 /*
@@ -28,8 +29,10 @@ class WavPlayerAlsa {
 public:
 
 	WavPlayerAlsa() :
+		web_sockets_api_(),
 		io_service_work_(io_service_),
-		mqtt_api_(io_service_)
+		mqtt_api_(io_service_),
+		current_song_controller_(io_service_, &mqtt_api_, &web_sockets_api_)
 	{
 
 	}
@@ -135,10 +138,9 @@ public:
 
 			if(UseMqtt()) {
 				mqtt_api_.Initialize(mqtt_api_logger_, &audio_files_manager, mqtt_host_, mqtt_port_);
-				audio_files_manager.RegisterPlayerEventsHandler(&mqtt_api_);
 			}
 			
-			audio_files_manager.RegisterPlayerEventsHandler(&web_sockets_api_);
+			audio_files_manager.RegisterPlayerEventsHandler(&current_song_controller_);
 		}
 		catch(const std::exception &e) {
 			root_logger_->critical("failed initialization, unable to start player. {}", e.what());
@@ -242,6 +244,8 @@ private:
 	wavplayeralsa::HttpApi http_api_;
 	wavplayeralsa::MqttApi mqtt_api_;
 	wavplayeralsa::AudioFilesManager audio_files_manager;
+
+	wavplayeralsa::CurrentSongController current_song_controller_;
 
 };
 

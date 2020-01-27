@@ -3,28 +3,18 @@
 #include <boost/foreach.hpp>
 #include <boost/bind.hpp>
 
-#include "nlohmann/json.hpp"
-
-
 using websocketpp::connection_hdl;
-
-using json = nlohmann::json;
-
 
 namespace wavplayeralsa {
 
-	WebSocketsApi::~WebSocketsApi() {
-		if(msg_throttle_timer_ != nullptr) {
-			delete msg_throttle_timer_;
-			msg_throttle_timer_ = nullptr;
-		}
+	WebSocketsApi::WebSocketsApi()
+	{
+		
 	}
 
 	void WebSocketsApi::Initialize(std::shared_ptr<spdlog::logger> logger, boost::asio::io_service *io_service, uint16_t ws_listen_port) {
 
 		logger_ = logger;
-		io_service_ = io_service;
-		msg_throttle_timer_ = new boost::asio::deadline_timer(*io_service);
 
 	    server_.clear_error_channels(websocketpp::log::alevel::all);
 	    server_.clear_access_channels(websocketpp::log::alevel::all);
@@ -42,55 +32,25 @@ namespace wavplayeralsa {
 	    server_.start_accept();
 
 	  	logger_->info("web sockets server started on port {}", ws_listen_port);
+
+		initialized = true;
 	}
 
-	void WebSocketsApi::NewSongStatus(const std::string &file_id, uint64_t start_time_millis_since_epoch, double speed) {
-		json j;
-		j["song_is_playing"] = true;
-		j["file_id"] = file_id;
-		j["start_time_millis_since_epoch"] = start_time_millis_since_epoch;
-		j["speed"] = speed;
-		UpdateLastStatusMsg(j);
-	}
+	void WebSocketsApi::ReportCurrentSong(const std::string &json_str) 
+	{
+		last_status_msg_ = json_str;
 
-	void WebSocketsApi::NoSongPlayingStatus(const std::string &file_id) {
-		json j;
-		j["song_is_playing"] = false;
-		j["stopped_file_id"] = file_id;
-		UpdateLastStatusMsg(j);
-	}
-
-	void WebSocketsApi::UpdateLastStatusMsg(const json &msgJson) {
-		std::string msg_json_str = msgJson.dump();
-
-		// Test for msg duplication.
-		// this is just optimization, and may not cover all cases (json keys are not ordered),
-		// but its cheap and easy to test.
-		if(msg_json_str == last_status_msg_) {
+		if(!initialized)
 			return;
-		}
-
-		last_status_msg_ = msg_json_str;
-		if(!has_active_timer_) {
-			msg_throttle_timer_->expires_from_now(boost::posix_time::milliseconds(THROTTLE_WAIT_TIME_MS));
-			msg_throttle_timer_->async_wait(boost::bind(&WebSocketsApi::SendToAllConnectedClients, this, _1));			
-			has_active_timer_ = true;
-		}
-	}
-
-	void WebSocketsApi::SendToAllConnectedClients(const boost::system::error_code &e) {
-		if(e) {
-			return;
-		}
 
 		logger_->info("new status message: {}. will send to all {} connected clients", last_status_msg_, connections_.size());
 		BOOST_FOREACH(const connection_hdl &hdl, connections_) {
 	        server_.send(hdl, last_status_msg_, websocketpp::frame::opcode::text);
 		}
-		has_active_timer_ = false;
 	}
 
-    void WebSocketsApi::OnOpen(connection_hdl hdl) {
+    void WebSocketsApi::OnOpen(connection_hdl hdl) 
+	{
         connections_.insert(hdl);
 
 		const auto con = server_.get_con_from_hdl(hdl);

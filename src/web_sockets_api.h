@@ -8,29 +8,21 @@
 #include "websocketpp/config/asio_no_tls.hpp"
 #include "websocketpp/server.hpp"
 #include "spdlog/spdlog.h"
-#include "nlohmann/json_fwd.hpp"
 
 #include "player_events_ifc.h"
 
 namespace wavplayeralsa {
 
-	class WebSocketsApi : public PlayerEventsIfc {
+	class WebSocketsApi {
 
 	public:
-		~WebSocketsApi();
+		WebSocketsApi();
 
 	public:
 		void Initialize(std::shared_ptr<spdlog::logger> logger, boost::asio::io_service *io_service, uint16_t ws_listen_port);
 
 	public:
-		// PlayerEventsIfc
-		void NewSongStatus(const std::string &file_id, uint64_t start_time_millis_since_epoch, double speed);
-		void NoSongPlayingStatus(const std::string &file_id);
-
-	private:
-		// handler functions
-		void UpdateLastStatusMsg(const nlohmann::json &msgJson);
-		void SendToAllConnectedClients(const boost::system::error_code &e);
+		void ReportCurrentSong(const std::string &json_str);
 
 	private:
 		// web sockets callbacks
@@ -43,15 +35,10 @@ namespace wavplayeralsa {
 		std::shared_ptr<spdlog::logger> logger_;
 		boost::asio::io_service *io_service_;
 
-		// throttle - in case we have burst of messages, we don't want to flood the clients.
-		// we will wait few ms after the first msg, and before sending it to clients.
-		// if more messages are recived in that time, we will only send the last on once.
-		static const int THROTTLE_WAIT_TIME_MS = 50;
-		boost::asio::deadline_timer *msg_throttle_timer_ = nullptr;
-		bool has_active_timer_ = false;
-
 		typedef std::set<websocketpp::connection_hdl, std::owner_less<websocketpp::connection_hdl>> ConList;
 		ConList connections_;
+
+		bool initialized = false;
 
 		std::string last_status_msg_;
 	};

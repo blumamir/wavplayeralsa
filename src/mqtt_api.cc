@@ -2,9 +2,6 @@
 
 #include <iostream>
 #include <boost/date_time/time_duration.hpp>
-#include "nlohmann/json.hpp"
-
-using json = nlohmann::json;
 
 namespace wavplayeralsa {
 
@@ -20,10 +17,6 @@ namespace wavplayeralsa {
 		// set class members
 		player_action_callback_ = player_action_callback;
 		logger_ = logger;
-
-		json j;
-		j["song_is_playing"] = false;
-		last_status_msg_ = j.dump();
 
 		const char *mqtt_client_id = "wavplayeralsa";
 		logger_->info("creating mqtt connection to host {} on port {} with client id {}", mqtt_host, mqtt_port, mqtt_client_id);
@@ -65,34 +58,14 @@ namespace wavplayeralsa {
 
 	}
 
-	void MqttApi::NewSongStatus(const std::string &file_id, uint64_t start_time_millis_since_epoch, double speed) 
+	void MqttApi::ReportCurrentSong(const std::string &json_str)
 	{
-		json j;
-		j["song_is_playing"] = true;
-		j["file_id"] = file_id;
-		j["start_time_millis_since_epoch"] = start_time_millis_since_epoch;
-		j["speed"] = speed;
-		UpdateLastStatusMsg(j);
-	}
+		last_status_msg_ = json_str;
 
-	void MqttApi::NoSongPlayingStatus(const std::string &file_id)
-	{
-		json j;
-		j["song_is_playing"] = false;
-		j["stopped_file_id"] = file_id;
-		UpdateLastStatusMsg(j);
-	}
-
-	void MqttApi::UpdateLastStatusMsg(const json &msgJson)
-	{
-		const std::string msg_json_str = msgJson.dump();
-
-		if(msg_json_str == last_status_msg_) {
-			return;
+		if(this->mqtt_client_)
+		{
+	    	this->mqtt_client_->publish_exactly_once(CURRENT_SONG_TOPIC, last_status_msg_, true);		
 		}
-
-		last_status_msg_ = msg_json_str;		
-	    this->mqtt_client_->publish_exactly_once(CURRENT_SONG_TOPIC, last_status_msg_, true);
 	}
 
 }
