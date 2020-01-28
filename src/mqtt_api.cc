@@ -1,6 +1,7 @@
 #include "mqtt_api.h"
 
 #include <iostream>
+#include <functional>
 #include <boost/date_time/time_duration.hpp>
 
 namespace wavplayeralsa {
@@ -26,33 +27,9 @@ namespace wavplayeralsa {
         mqtt_client_->set_client_id(mqtt_client_id);
 	    mqtt_client_->set_clean_session(true);
 
-    	mqtt_client_->set_error_handler(
-			[this]
-			(boost::system::error_code ec) {
-				logger_->error("client disconnected from mqtt server. will try reconnect in {} ms", reconnect_wait_ms);
-				reconnect_timer_.expires_from_now(boost::posix_time::milliseconds(reconnect_wait_ms));
-				reconnect_timer_.async_wait(
-				    [this] 
-					(boost::system::error_code ec) {
-						if (ec != boost::asio::error::operation_aborted) {
-                    		mqtt_client_->connect();
-						}
-                	});
-			});
-
-    	mqtt_client_->set_close_handler(
-			[this]
-			() {
-				logger_->error("client connection to mqtt server is closed");
-			});
-
-	    mqtt_client_->set_connack_handler(
-	        [this]
-	        (bool sp, std::uint8_t connack_return_code){
-	        	logger_->info("connack handler called. clean session: {}. coonack rerturn code: {}", sp, mqtt::connect_return_code_to_str(connack_return_code));
-				this->mqtt_client_->publish_exactly_once(CURRENT_SONG_TOPIC, last_status_msg_, true);
-	            return true;
-	        });	    
+    	mqtt_client_->set_error_handler(std::bind(&MqttApi::OnError, this, std::placeholders::_1));
+    	mqtt_client_->set_close_handler(std::bind(&MqttApi::OnClose, this));
+	    mqtt_client_->set_connack_handler(std::bind(&MqttApi::OnConnAck, this, std::placeholders::_1, std::placeholders::_2));
 
 	    mqtt_client_->connect();
 
@@ -61,11 +38,43 @@ namespace wavplayeralsa {
 	void MqttApi::ReportCurrentSong(const std::string &json_str)
 	{
 		last_status_msg_ = json_str;
+		PublishCurrentSong();
+	}
 
-		if(this->mqtt_client_)
-		{
-	    	this->mqtt_client_->publish_exactly_once(CURRENT_SONG_TOPIC, last_status_msg_, true);		
-		}
+	void MqttApi::OnError(boost::system::error_code ec)
+	{
+		logger_->error("client disconnected from mqtt server. will try reconnect in {} ms", RECONNECT_WAIT_MS);
+		reconnect_timer_.expires_from_now(boost::posix_time::milliseconds(RECONNECT_WAIT_MS));
+		reconnect_timer_.async_wait(
+			[this] 
+			(boost::system::error_code ec) {
+				if (ec != boost::asio::error::operation_aborted) {
+					mqtt_client_->connect();
+				}
+			});
+	}
+
+	void MqttApi::OnClose()
+	{
+		logger_->error("client connection to mqtt server is closed");
+	}
+
+	bool MqttApi::OnConnAck(bool session_present, std::uint8_t connack_return_code)
+	{
+		logger_->info("connack handler called. clean session: {}. coonack rerturn code: {}", session_present, mqtt::connect_return_code_to_str(connack_return_code));
+		PublishCurrentSong();
+		return true;
+	}
+
+	void MqttApi::PublishCurrentSong()
+	{
+		if(!this->mqtt_client_)
+			return;
+
+		if(last_status_msg_.empty())
+			return;
+
+		this->mqtt_client_->publish_exactly_once(CURRENT_SONG_TOPIC, last_status_msg_, true);
 	}
 
 }

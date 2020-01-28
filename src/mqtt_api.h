@@ -13,10 +13,6 @@
 
 #include "player_actions_ifc.h"
 
-#ifndef CURRENT_SONG_TOPIC
-#define CURRENT_SONG_TOPIC "current-song"
-#endif // CURRENT_SONG_TOPIC
-
 namespace wavplayeralsa {
 
 	class MqttApi {
@@ -29,7 +25,16 @@ namespace wavplayeralsa {
 		void ReportCurrentSong(const std::string &json_str);
 
 	private:
-		const int reconnect_wait_ms = 2000;
+		void OnError(boost::system::error_code ec);
+		void OnClose();
+		bool OnConnAck(bool session_present, std::uint8_t connack_return_code);
+
+	private:
+		void PublishCurrentSong();
+
+	private:
+		const int RECONNECT_WAIT_MS = 2000;
+		const char *CURRENT_SONG_TOPIC = "current-song";
 
 	private:
 		// outside services
