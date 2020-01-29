@@ -5,7 +5,6 @@
 #include <cstdint>
 #include <sstream>
 
-#include <boost/asio.hpp>
 #include <boost/bind.hpp>
 #include <boost/filesystem.hpp>
 
@@ -28,14 +27,12 @@ namespace wavplayeralsa {
 		out_msg containing the action status.
 	*/
 	class AudioFilesManager : 
-		public wavplayeralsa::PlayerActionsIfc,
-		public wavplayeralsa::PlayerEventsIfc 
+		public wavplayeralsa::PlayerActionsIfc
 	{
 
 	public:
 
-		void Initialize(std::shared_ptr<spdlog::logger> alsa_frames_transfer_logger, boost::asio::io_service *main_io_service, const std::string &wav_dir, const std::string &audio_device);
-		void RegisterPlayerEventsHandler(PlayerEventsIfc *player_events_ifc);
+		void Initialize(AlsaFramesTransfer *alsa_frames_transfer, const std::string &wav_dir);
 
 	public:
 		// wavplayeralsa::PlayerActionsIfc
@@ -43,18 +40,10 @@ namespace wavplayeralsa {
 		bool StopPlayRequest(std::stringstream &out_msg);
 		std::list<std::string> QueryFiles();
 
-	public:
-		// wavplayeralsa::PlayerEventsIfc
-		void NewSongStatus(const std::string &file_id, uint64_t start_time_millis_since_epoch, double speed);
-		void NoSongPlayingStatus(const std::string &file_id);
-
 	private:
 		boost::filesystem::path wav_dir_;
 
-		AlsaFramesTransfer alsa_frames_transfer_;
-		
-		boost::asio::io_service *main_io_service_;
-		std::vector<PlayerEventsIfc *> player_events_ifc_;
+		AlsaFramesTransfer *alsa_frames_transfer_ = nullptr;
 
 	};
 

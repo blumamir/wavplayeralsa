@@ -29,6 +29,7 @@ namespace wavplayeralsa {
         void ReportCurrentSongToServices(const boost::system::error_code& error);
 
     private:
+        boost::asio::io_service &ios_;
         MqttApi *mqtt_service_;
         WebSocketsApi *ws_service_;
 

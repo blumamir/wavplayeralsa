@@ -10,7 +10,7 @@ namespace wavplayeralsa
 {
 
     CurrentSongController::CurrentSongController(boost::asio::io_service &io_service, MqttApi *mqtt_service, WebSocketsApi *ws_service)
-        : throttle_timer_(io_service)
+        : ios_(io_service), throttle_timer_(io_service)
     {
         mqtt_service_ = mqtt_service;
         ws_service_ = ws_service;
@@ -26,8 +26,9 @@ namespace wavplayeralsa
 		j["song_is_playing"] = true;
 		j["file_id"] = file_id;
 		j["start_time_millis_since_epoch"] = start_time_millis_since_epoch;
-		j["speed"] = speed;  
-        UpdateLastStatusMsg(j);
+		j["speed"] = speed;
+
+        ios_.post(std::bind(&CurrentSongController::UpdateLastStatusMsg, this, j));
     }
 
     void CurrentSongController::NoSongPlayingStatus(const std::string &file_id)       
@@ -35,7 +36,8 @@ namespace wavplayeralsa
 		json j;
 		j["song_is_playing"] = false;
 		j["stopped_file_id"] = file_id;
-        UpdateLastStatusMsg(j);
+        
+        ios_.post(std::bind(&CurrentSongController::UpdateLastStatusMsg, this, j));
     }
 
 	void CurrentSongController::UpdateLastStatusMsg(const json &msgJson)

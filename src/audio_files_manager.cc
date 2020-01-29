@@ -6,25 +6,17 @@
 
 namespace wavplayeralsa {
 
-	void AudioFilesManager::Initialize(std::shared_ptr<spdlog::logger> alsa_frames_transfer_logger, 
-			boost::asio::io_service *main_io_service, 
-			const std::string &wav_dir, 
-			const std::string &audio_device) 
+	void AudioFilesManager::Initialize(
+			AlsaFramesTransfer *alsa_frames_transfer,
+			const std::string &wav_dir)
 	{
 		wav_dir_ = boost::filesystem::path(wav_dir);
-		main_io_service_ = main_io_service;
-
-		alsa_frames_transfer_.Initialize(alsa_frames_transfer_logger, this, audio_device);
-	}
-
-	void AudioFilesManager::RegisterPlayerEventsHandler(PlayerEventsIfc *player_events_ifc)
-	{
-		player_events_ifc_.push_back(player_events_ifc);
+		alsa_frames_transfer_ = alsa_frames_transfer;
 	}
 
 	bool AudioFilesManager::NewSongRequest(const std::string &file_id, uint64_t start_offset_ms, std::stringstream &out_msg) {
 
-		if(file_id == alsa_frames_transfer_.GetFileId()) {
+		if(file_id == alsa_frames_transfer_->GetFileId()) {
 			out_msg << "changed position of the current file '" << file_id << "'. new position in ms is: " << start_offset_ms << std::endl;
 		}
 		else {
@@ -42,8 +34,8 @@ namespace wavplayeralsa {
 			}
 
 			try {
-				const std::string prev_file = alsa_frames_transfer_.GetFileId();
-				bool prev_file_was_playing = alsa_frames_transfer_.LoadNewFile(canonicalFullPath, file_id);
+				const std::string prev_file = alsa_frames_transfer_->GetFileId();
+				bool prev_file_was_playing = alsa_frames_transfer_->LoadNewFile(canonicalFullPath, file_id);
 
 				// message printing
 				const int SECONDS_PER_HOUR = (60 * 60);
@@ -70,7 +62,7 @@ namespace wavplayeralsa {
 			}
 		}
 
-		alsa_frames_transfer_.StartPlay(start_offset_ms);
+		alsa_frames_transfer_->StartPlay(start_offset_ms);
 		return true;
 	}
 
@@ -78,14 +70,14 @@ namespace wavplayeralsa {
 
 		bool was_playing = false;
 		try {
-			was_playing = alsa_frames_transfer_.Stop();
+			was_playing = alsa_frames_transfer_->Stop();
 		}
 		catch(const std::runtime_error &e) {
 			out_msg << "Unable to stop current audio file successfully, error: " << e.what();
 			return false;
 		}
 
-		const std::string &current_file_id = alsa_frames_transfer_.GetFileId();
+		const std::string &current_file_id = alsa_frames_transfer_->GetFileId();
 		if(current_file_id.empty() || !was_playing) {
 			out_msg << "no audio file is being played, so stop had no effect";			
 		}
@@ -108,18 +100,6 @@ namespace wavplayeralsa {
 		}
 		return fileIds;
 	}
-
-	void AudioFilesManager::NewSongStatus(const std::string &file_id, uint64_t start_time_millis_since_epoch, double speed) {
-		BOOST_FOREACH(PlayerEventsIfc *player_events_ifc, player_events_ifc_) {
-			main_io_service_->post(boost::bind(&PlayerEventsIfc::NewSongStatus, player_events_ifc, file_id, start_time_millis_since_epoch, speed));			
-		}
-	}
-
-	void AudioFilesManager::NoSongPlayingStatus(const std::string &file_id) {
-		BOOST_FOREACH(PlayerEventsIfc *player_events_ifc, player_events_ifc_) {
-			main_io_service_->post(boost::bind(&PlayerEventsIfc::NoSongPlayingStatus, player_events_ifc, file_id));		
-		}
-	}	
 
 }
 

@@ -132,15 +132,14 @@ public:
 	// can throw exception
 	void InitializeComponents() {
 		try {
-			audio_files_manager.Initialize(alsa_frames_transfer_logger_, &io_service_, wav_dir_, audio_device_);
+			alsa_frames_transfer_.Initialize(alsa_frames_transfer_logger_, &current_song_controller_, audio_device_);
+			audio_files_manager.Initialize(&alsa_frames_transfer_, wav_dir_);
 			web_sockets_api_.Initialize(ws_api_logger_, &io_service_, ws_listen_port_);
 			http_api_.Initialize(http_api_logger_, &io_service_, &audio_files_manager, http_listen_port_);
 
 			if(UseMqtt()) {
 				mqtt_api_.Initialize(mqtt_api_logger_, &audio_files_manager, mqtt_host_, mqtt_port_);
 			}
-			
-			audio_files_manager.RegisterPlayerEventsHandler(&current_song_controller_);
 		}
 		catch(const std::exception &e) {
 			root_logger_->critical("failed initialization, unable to start player. {}", e.what());
@@ -244,6 +243,7 @@ private:
 	wavplayeralsa::HttpApi http_api_;
 	wavplayeralsa::MqttApi mqtt_api_;
 	wavplayeralsa::AudioFilesManager audio_files_manager;
+	wavplayeralsa::AlsaFramesTransfer alsa_frames_transfer_;
 
 	wavplayeralsa::CurrentSongController current_song_controller_;
 
