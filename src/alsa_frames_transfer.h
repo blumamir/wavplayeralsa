@@ -5,6 +5,8 @@
 #include <atomic>
 #include <string>
 #include <thread>
+#include <boost/asio.hpp>
+#include <boost/asio/deadline_timer.hpp>
 
 #include "alsa/asoundlib.h"
 #include "sndfile.hh"
@@ -97,8 +99,8 @@ namespace wavplayeralsa {
 		void CheckSongStartTime();
 		// once all frames are written to pcm, this function runs until pcm is empty,
 		// while allowing the cancelation with the should_be_playing_ flag
-		void PcmDrainLoop();
-		void FramesToPcmTransferLoop();
+		void PcmDrainLoop(boost::system::error_code error_code);
+		void FramesToPcmTransferLoop(boost::system::error_code error_code);
 
 	private:
 		std::shared_ptr<spdlog::logger> logger_;
@@ -149,6 +151,8 @@ namespace wavplayeralsa {
 
 	private:
 		// transfer thread
+		boost::asio::io_service alsa_ios_;
+		boost::asio::deadline_timer alsa_wait_timer_;
 		std::thread playing_thread_;
 		std::atomic_bool should_be_playing_; // used to cancel the playing thread
 

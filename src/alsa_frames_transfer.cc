@@ -9,6 +9,7 @@
 namespace wavplayeralsa {
 
 	AlsaFramesTransfer::AlsaFramesTransfer() : 
+		alsa_wait_timer_(alsa_ios_),
 		should_be_playing_(false)
 	{}
 	
@@ -96,8 +97,9 @@ namespace wavplayeralsa {
 	void AlsaFramesTransfer::TransferFramesWrapper() {
 
 		try {
-			FramesToPcmTransferLoop();
-			PcmDrainLoop();
+			alsa_ios_.reset();
+			alsa_ios_.post(std::bind(&AlsaFramesTransfer::FramesToPcmTransferLoop, this, boost::system::error_code()));
+			alsa_ios_.run();
 		}
 		catch(const std::runtime_error &e) {
 			logger_->error("error while playing current wav file. stopped transfering frames to alsa. exception is: {}", e.what());
@@ -107,102 +109,98 @@ namespace wavplayeralsa {
 
 	}
 
-	void AlsaFramesTransfer::FramesToPcmTransferLoop() {
+	void AlsaFramesTransfer::FramesToPcmTransferLoop(boost::system::error_code error_code) {
+
+		// the function might be called from timer, in which case error_code might
+		// indicate the timer canceled and we should not invoke the function.
+		if(error_code)
+			return;
 
 		std::stringstream err_desc;
 		int err;
 
-		while(true) {
+		if(should_be_playing_ == false) {
+			// if we need to stop playing, just return. droping the frames from the pcm will be done later
+			return;
+		}
 
-			if(should_be_playing_ == false) {
-				// if we need to stop playing, just return. droping the frames from the pcm will be done later
-				return;
+		// calculate how many frames to write
+		snd_pcm_sframes_t frames_to_deliver;
+		if( (frames_to_deliver = snd_pcm_avail_update(alsa_playback_handle_)) < 0) {
+			if(frames_to_deliver == -EPIPE) {
+				throw std::runtime_error("an xrun occured");
 			}
-
-			const int wait_timeout_ms = 5;
-			if( (err = snd_pcm_wait(alsa_playback_handle_, wait_timeout_ms)) < 0) {
-				err_desc << "pool failed (" << snd_strerror(err) << ")";
+			else {
+				err_desc << "unknown ALSA avail update return value (" << frames_to_deliver << ")";
 				throw std::runtime_error(err_desc.str());
 			}
-			if(err == 0) {
-				// timeout occured. means we waited wait_timeout_ms ms, and not enough frames were
-				// availible in the alsa buffers. 
-				// we will just continue, that will give us a chance to check for stop playing again
-				continue;
-			}
-
-			// calculate how many frames to write
-			snd_pcm_sframes_t frames_to_deliver;
-			if( (frames_to_deliver = snd_pcm_avail_update(alsa_playback_handle_)) < 0) {
-				if(frames_to_deliver == -EPIPE) {
-					throw std::runtime_error("an xrun occured");
-				}
-				else {
-					err_desc << "unknown ALSA avail update return value (" << frames_to_deliver << ")";
-					throw std::runtime_error(err_desc.str());
-				}
-			}
-
-			// we want to deliver as many frames as possible.
-			// we can put frames_to_deliver number of frames, but the buffer can only hold frames_capacity_in_buffer_ frames
-			frames_to_deliver = frames_to_deliver > frames_capacity_in_buffer_ ? frames_capacity_in_buffer_ : frames_to_deliver;
-			unsigned int bytes_to_deliver = frames_to_deliver * bytes_per_frame_;
-
-			// read the frames from the file. TODO: what if readRaw fails?
-			char buffer_for_transfer[TRANSFER_BUFFER_SIZE];
-			bytes_to_deliver = snd_file_.readRaw(buffer_for_transfer, bytes_to_deliver);
-			if(bytes_to_deliver < 0) {
-				err_desc << "Failed reading raw frames from snd file. returned: " << sf_error_number(bytes_to_deliver);
-				throw std::runtime_error(err_desc.str());				
-			}
-			if(bytes_to_deliver == 0) {
-				logger_->info("done writing all frames to pcm. waiting for audio device to play remaining frames in the buffer");
-				break;
-			}
-
-
-			int frames_written = snd_pcm_writei(alsa_playback_handle_, buffer_for_transfer, frames_to_deliver);
-			if( frames_written < 0) {
-				err_desc << "snd_pcm_writei failed (" << snd_strerror(frames_written) << ")";
-				throw std::runtime_error(err_desc.str());				
-			}
-
-			curr_position_frames_ += frames_written;
-			if(frames_written != frames_to_deliver) {
-				logger_->warn("transfered to alsa less frame then requested. frames_to_deliver: {}, frames_written: {}", frames_to_deliver, frames_written);
-				snd_file_.seek(curr_position_frames_, SEEK_SET);
-			}
-
-			CheckSongStartTime();
 		}
+		else if(frames_to_deliver == 0) {
+			alsa_wait_timer_.expires_from_now(boost::posix_time::millisec(5));
+			alsa_wait_timer_.async_wait(std::bind(&AlsaFramesTransfer::FramesToPcmTransferLoop, this, std::placeholders::_1));
+			return;
+		}
+
+		// we want to deliver as many frames as possible.
+		// we can put frames_to_deliver number of frames, but the buffer can only hold frames_capacity_in_buffer_ frames
+		frames_to_deliver = frames_to_deliver > frames_capacity_in_buffer_ ? frames_capacity_in_buffer_ : frames_to_deliver;
+		unsigned int bytes_to_deliver = frames_to_deliver * bytes_per_frame_;
+
+		// read the frames from the file. TODO: what if readRaw fails?
+		char buffer_for_transfer[TRANSFER_BUFFER_SIZE];
+		bytes_to_deliver = snd_file_.readRaw(buffer_for_transfer, bytes_to_deliver);
+		if(bytes_to_deliver < 0) {
+			err_desc << "Failed reading raw frames from snd file. returned: " << sf_error_number(bytes_to_deliver);
+			throw std::runtime_error(err_desc.str());				
+		}
+		if(bytes_to_deliver == 0) {
+			logger_->info("done writing all frames to pcm. waiting for audio device to play remaining frames in the buffer");
+			alsa_ios_.post(std::bind(&AlsaFramesTransfer::PcmDrainLoop, this, boost::system::error_code()));
+			return;
+		}
+
+
+		int frames_written = snd_pcm_writei(alsa_playback_handle_, buffer_for_transfer, frames_to_deliver);
+		if( frames_written < 0) {
+			err_desc << "snd_pcm_writei failed (" << snd_strerror(frames_written) << ")";
+			throw std::runtime_error(err_desc.str());				
+		}
+
+		curr_position_frames_ += frames_written;
+		if(frames_written != frames_to_deliver) {
+			logger_->warn("transfered to alsa less frame then requested. frames_to_deliver: {}, frames_written: {}", frames_to_deliver, frames_written);
+			snd_file_.seek(curr_position_frames_, SEEK_SET);
+		}
+
+		CheckSongStartTime();
+
+		alsa_ios_.post(std::bind(&AlsaFramesTransfer::FramesToPcmTransferLoop, this, boost::system::error_code()));
 	}
 
-	void AlsaFramesTransfer::PcmDrainLoop() {
+	void AlsaFramesTransfer::PcmDrainLoop(boost::system::error_code error_code) {
 
-		while(true) {
+		bool is_currently_playing = IsAlsaStatePlaying();
 
-			bool is_currently_playing = IsAlsaStatePlaying();
-
-			if(should_be_playing_ == false) {
-				logger_->info("will stop transfering frames to alsa, and drop current frames from pcm");
-			}
-			else if(!is_currently_playing) {
-				logger_->info("playing audio file ended successfully (transfered all frames to pcm and it is empty)");
-			}
-
-			if(!is_currently_playing || should_be_playing_ == false) {
-				int err;
-				if( (err = snd_pcm_drop(alsa_playback_handle_)) < 0 ) {
-					std::stringstream err_desc;
-					err_desc << "snd_pcm_drop failed (" << snd_strerror(err) << ")";
-					throw std::runtime_error(err_desc.str());
-				}
-				return;
-			}
-
-			CheckSongStartTime();
-			std::this_thread::sleep_for(std::chrono::milliseconds(5));
+		if(should_be_playing_ == false) {
+			logger_->info("will stop transfering frames to alsa, and drop current frames from pcm");
 		}
+		else if(!is_currently_playing) {
+			logger_->info("playing audio file ended successfully (transfered all frames to pcm and it is empty)");
+		}
+
+		if(!is_currently_playing || should_be_playing_ == false) {
+			int err;
+			if( (err = snd_pcm_drop(alsa_playback_handle_)) < 0 ) {
+				std::stringstream err_desc;
+				err_desc << "snd_pcm_drop failed (" << snd_strerror(err) << ")";
+				throw std::runtime_error(err_desc.str());
+			}
+			return;
+		}
+
+		CheckSongStartTime();
+		alsa_wait_timer_.expires_from_now(boost::posix_time::millisec(5));
+		alsa_wait_timer_.async_wait(std::bind(&AlsaFramesTransfer::PcmDrainLoop, this, std::placeholders::_1));
 	}
 
 	bool AlsaFramesTransfer::IsAlsaStatePlaying() {
