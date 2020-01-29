@@ -9,9 +9,11 @@
 namespace wavplayeralsa {
 
 	AlsaFramesTransfer::AlsaFramesTransfer() : 
-		alsa_wait_timer_(alsa_ios_),
-		should_be_playing_(false)
-	{}
+		alsa_wait_timer_(alsa_ios_)
+	{
+		// we use the stop flag to indicate if a song is currently playing or not
+		alsa_ios_.stop();
+	}
 	
 
 	AlsaFramesTransfer::~AlsaFramesTransfer() {
@@ -100,13 +102,12 @@ namespace wavplayeralsa {
 			alsa_ios_.reset();
 			alsa_ios_.post(std::bind(&AlsaFramesTransfer::FramesToPcmTransferLoop, this, boost::system::error_code()));
 			alsa_ios_.run();
+			PcmDrop();
 		}
 		catch(const std::runtime_error &e) {
 			logger_->error("error while playing current wav file. stopped transfering frames to alsa. exception is: {}", e.what());
 		}
 		player_events_callback_->NoSongPlayingStatus(file_id_);		
-		should_be_playing_ = false;
-
 	}
 
 	void AlsaFramesTransfer::FramesToPcmTransferLoop(boost::system::error_code error_code) {
@@ -118,11 +119,6 @@ namespace wavplayeralsa {
 
 		std::stringstream err_desc;
 		int err;
-
-		if(should_be_playing_ == false) {
-			// if we need to stop playing, just return. droping the frames from the pcm will be done later
-			return;
-		}
 
 		// calculate how many frames to write
 		snd_pcm_sframes_t frames_to_deliver;
@@ -181,26 +177,25 @@ namespace wavplayeralsa {
 
 		bool is_currently_playing = IsAlsaStatePlaying();
 
-		if(should_be_playing_ == false) {
-			logger_->info("will stop transfering frames to alsa, and drop current frames from pcm");
-		}
-		else if(!is_currently_playing) {
+		if(!is_currently_playing) {
 			logger_->info("playing audio file ended successfully (transfered all frames to pcm and it is empty)");
-		}
-
-		if(!is_currently_playing || should_be_playing_ == false) {
-			int err;
-			if( (err = snd_pcm_drop(alsa_playback_handle_)) < 0 ) {
-				std::stringstream err_desc;
-				err_desc << "snd_pcm_drop failed (" << snd_strerror(err) << ")";
-				throw std::runtime_error(err_desc.str());
-			}
 			return;
 		}
 
 		CheckSongStartTime();
+
 		alsa_wait_timer_.expires_from_now(boost::posix_time::millisec(5));
 		alsa_wait_timer_.async_wait(std::bind(&AlsaFramesTransfer::PcmDrainLoop, this, std::placeholders::_1));
+	}
+
+	void AlsaFramesTransfer::PcmDrop() 
+	{
+		int err;
+		if( (err = snd_pcm_drop(alsa_playback_handle_)) < 0 ) {
+			std::stringstream err_desc;
+			err_desc << "snd_pcm_drop failed (" << snd_strerror(err) << ")";
+			throw std::runtime_error(err_desc.str());
+		}
 	}
 
 	bool AlsaFramesTransfer::IsAlsaStatePlaying() {
@@ -231,7 +226,6 @@ namespace wavplayeralsa {
 		}
 
 		logger_->info("start playing file {} from position {} mili-seconds ({} seconds)", file_id_, position_in_ms, position_in_seconds);
-		should_be_playing_ = true;
 		playing_thread_ = std::thread(&AlsaFramesTransfer::TransferFramesWrapper, this);
 	}
 
@@ -249,10 +243,11 @@ namespace wavplayeralsa {
 	*/
 	bool AlsaFramesTransfer::Stop() {
 
-		// there is a possible race condition here, if we copy the value, and then audio reaches it's end,
-		// but that is ok for our use (we don't need a precise indication, just a general idea)
-		bool is_playing = should_be_playing_;
-		should_be_playing_ = false;
+		bool is_playing = !(alsa_ios_.stopped());
+		
+		alsa_wait_timer_.cancel();
+		alsa_ios_.stop();
+
 		if(playing_thread_.joinable()) {
 			playing_thread_.join();
 		}

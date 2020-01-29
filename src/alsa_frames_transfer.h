@@ -97,10 +97,10 @@ namespace wavplayeralsa {
 		void TransferFramesWrapper();
 		bool IsAlsaStatePlaying();
 		void CheckSongStartTime();
-		// once all frames are written to pcm, this function runs until pcm is empty,
-		// while allowing the cancelation with the should_be_playing_ flag
+		// once all frames are written to pcm, this function runs until pcm is empty
 		void PcmDrainLoop(boost::system::error_code error_code);
 		void FramesToPcmTransferLoop(boost::system::error_code error_code);
+		void PcmDrop();
 
 	private:
 		std::shared_ptr<spdlog::logger> logger_;
@@ -154,7 +154,6 @@ namespace wavplayeralsa {
 		boost::asio::io_service alsa_ios_;
 		boost::asio::deadline_timer alsa_wait_timer_;
 		std::thread playing_thread_;
-		std::atomic_bool should_be_playing_; // used to cancel the playing thread
 
 	private:
 		// position reporting
