@@ -20,6 +20,11 @@ namespace wavplayeralsa
 		UpdateLastStatusMsg(j);
     }
 
+    void CurrentSongController::Initialize(const std::string &player_uuid)
+    {
+        player_uuid_ = player_uuid;
+    }
+
     void CurrentSongController::NewSongStatus(const std::string &file_id, uint64_t start_time_millis_since_epoch, double speed)
     {
 		json j;
@@ -40,9 +45,12 @@ namespace wavplayeralsa
         ios_.post(std::bind(&CurrentSongController::UpdateLastStatusMsg, this, j));
     }
 
-	void CurrentSongController::UpdateLastStatusMsg(const json &msgJson)
+	void CurrentSongController::UpdateLastStatusMsg(const json &alsa_data)
 	{
-		const std::string msg_json_str = msgJson.dump();
+        json full_msg(alsa_data);
+        full_msg["uuid"] = player_uuid_;
+
+		const std::string msg_json_str = full_msg.dump();
 
 		if(msg_json_str == last_status_msg_) {
 			return;

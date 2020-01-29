@@ -4,6 +4,7 @@
 #include <iomanip>
 #include <sstream>
 #include <cstdint>
+#include <uuid/uuid.h>
 
 #include <boost/asio.hpp>
 #include <boost/filesystem.hpp>
@@ -129,9 +130,19 @@ public:
 		}
 	}
 
+	void CreateUUID() {
+		uuid_t uuid;
+        uuid_generate_time_safe(uuid);
+		char uuid_str[37];      // ex. "1b4e28ba-2fa1-11d2-883f-0016d3cca427" + "\0"
+		uuid_unparse_lower(uuid, uuid_str);
+		uuid_ = std::string(uuid_str);
+		root_logger_->info("Generated uuid for this player run: {}", uuid_);
+	}
+
 	// can throw exception
 	void InitializeComponents() {
 		try {
+			current_song_controller_.Initialize(uuid_);
 			alsa_frames_transfer_.Initialize(alsa_frames_transfer_logger_, &current_song_controller_, audio_device_);
 			audio_files_manager.Initialize(&alsa_frames_transfer_, wav_dir_);
 			web_sockets_api_.Initialize(ws_api_logger_, &io_service_, ws_listen_port_);
@@ -236,6 +247,8 @@ private:
 	std::shared_ptr<spdlog::logger> ws_api_logger_;
 	std::shared_ptr<spdlog::logger> alsa_frames_transfer_logger_;
 
+private:
+	std::string uuid_;
 
 private:
 	// app components
@@ -255,6 +268,7 @@ int main(int argc, char *argv[]) {
 	WavPlayerAlsa wav_player_alsa;
 	wav_player_alsa.CommandLineArguments(argc, argv);
 	wav_player_alsa.CreateLoggers(argv[0]);
+	wav_player_alsa.CreateUUID();
 	wav_player_alsa.InitializeComponents();
 	wav_player_alsa.Start();
 

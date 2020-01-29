@@ -20,18 +20,23 @@ namespace wavplayeralsa {
     public:
         CurrentSongController(boost::asio::io_service &io_service, MqttApi *mqtt_service, WebSocketsApi *ws_service);
 
+        void Initialize(const std::string &player_uuid);
+
     public:
         void NewSongStatus(const std::string &file_id, uint64_t start_time_millis_since_epoch, double speed);
         void NoSongPlayingStatus(const std::string &file_id);
 
     private:
-        void UpdateLastStatusMsg(const json &msgJson);
+        void UpdateLastStatusMsg(const json &alsa_data);
         void ReportCurrentSongToServices(const boost::system::error_code& error);
 
     private:
         boost::asio::io_service &ios_;
         MqttApi *mqtt_service_;
         WebSocketsApi *ws_service_;
+
+    private:
+        std::string player_uuid_;
 
     private:
     	std::string last_status_msg_;
