@@ -12,11 +12,16 @@ This interface describe the actions that can be performed on the player external
 
 namespace wavplayeralsa {
 
-	class PlayerActionsIfc {
-
+	class CurrentSongActionsIfc {
+	
 	public:
 		virtual bool NewSongRequest(const std::string &file_id, uint64_t start_offset_ms, std::stringstream &out_msg) = 0;
 		virtual bool StopPlayRequest(std::stringstream &out_msg) = 0;
+	};
+
+	class PlayerFilesActionsIfc {
+
+	public:
 		virtual std::list<std::string> QueryFiles() = 0;
 
 	};

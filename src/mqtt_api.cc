@@ -13,10 +13,9 @@ namespace wavplayeralsa {
 
 	}
 
-	void MqttApi::Initialize(std::shared_ptr<spdlog::logger> logger, PlayerActionsIfc *player_action_callback, const std::string &mqtt_host, uint16_t mqtt_port) {
+	void MqttApi::Initialize(std::shared_ptr<spdlog::logger> logger, const std::string &mqtt_host, uint16_t mqtt_port) {
 
 		// set class members
-		player_action_callback_ = player_action_callback;
 		logger_ = logger;
 
 		const char *mqtt_client_id = "wavplayeralsa";

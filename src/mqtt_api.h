@@ -11,15 +11,16 @@
 #define MQTT_NO_TLS
 #include "mqtt_cpp/mqtt_client_cpp.hpp"
 
-#include "player_actions_ifc.h"
-
 namespace wavplayeralsa {
 
 	class MqttApi {
 
 	public:
 		MqttApi(boost::asio::io_service &io_service);
-		void Initialize(std::shared_ptr<spdlog::logger> logger, PlayerActionsIfc *player_action_callback, const std::string &mqtt_host, uint16_t mqtt_port);
+		void Initialize(
+			std::shared_ptr<spdlog::logger> logger, 
+			const std::string &mqtt_host, 
+			uint16_t mqtt_port);
 
 	public:
 		void ReportCurrentSong(const std::string &json_str);
@@ -38,7 +39,6 @@ namespace wavplayeralsa {
 
 	private:
 		// outside services
-		PlayerActionsIfc *player_action_callback_;
 		std::shared_ptr<spdlog::logger> logger_;
 		boost::asio::io_service &io_service_;
 

@@ -11,39 +11,23 @@
 #include "spdlog/spdlog.h"
 
 #include "player_actions_ifc.h"
-#include "player_events_ifc.h"
-#include "alsa_frames_transfer.h"
 
 namespace wavplayeralsa {
 
-	/*
-	This class offloads some of the tasks of the alsa_frames_transfer, so the former one is more simple and thin.
-	These tasks are:
-	- it allow alsa_frames_transfer to publish PlayerEventsIfc calls on it's own thread, without need to know
-		or care about transfering the interface calls to the right clients and io service.
-	- it handles all the file_id and audio files manipulations and hands over to alsa_frames_transfer a clean
-		and proccessed file name.
-	- it handles some of the details involved in PlayerActionsIfc, for example: producing a human readable,
-		out_msg containing the action status.
-	*/
 	class AudioFilesManager : 
-		public wavplayeralsa::PlayerActionsIfc
+		public wavplayeralsa::PlayerFilesActionsIfc
 	{
 
 	public:
 
-		void Initialize(AlsaFramesTransfer *alsa_frames_transfer, const std::string &wav_dir);
+		void Initialize(const std::string &wav_dir);
 
 	public:
-		// wavplayeralsa::PlayerActionsIfc
-		bool NewSongRequest(const std::string &file_id, uint64_t start_offset_ms, std::stringstream &out_msg);
-		bool StopPlayRequest(std::stringstream &out_msg);
+		// wavplayeralsa::PlayerFilesActionsIfc
 		std::list<std::string> QueryFiles();
 
 	private:
 		boost::filesystem::path wav_dir_;
-
-		AlsaFramesTransfer *alsa_frames_transfer_ = nullptr;
 
 	};
 

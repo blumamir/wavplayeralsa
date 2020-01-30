@@ -10,10 +10,17 @@ using json = nlohmann::json;
 
 namespace wavplayeralsa {
 
-	void HttpApi::Initialize(std::shared_ptr<spdlog::logger> logger, boost::asio::io_service *io_service, PlayerActionsIfc *player_action_callback, uint16_t http_listen_port) {
+	void HttpApi::Initialize(
+		std::shared_ptr<spdlog::logger> logger, 
+		boost::asio::io_service *io_service, 
+		CurrentSongActionsIfc *current_song_action_callback, 
+		PlayerFilesActionsIfc *player_files_action_callback, 
+		uint16_t http_listen_port) 
+	{
 
 		// set class members
-		player_action_callback_ = player_action_callback;
+		current_song_action_callback_ = current_song_action_callback;
+		player_files_action_callback_ = player_files_action_callback;
 		logger_ = logger;
 
 	  	server_.config.port = http_listen_port;
@@ -56,7 +63,7 @@ namespace wavplayeralsa {
 	}
 
 	void HttpApi::OnGetAvailableFiles(std::shared_ptr<HttpServer::Response> response, std::shared_ptr<HttpServer::Request> request) {
-		const std::list<std::string> fileIds = player_action_callback_->QueryFiles();
+		const std::list<std::string> fileIds = player_files_action_callback_->QueryFiles();
 		WriteJsonResponseSuccess(response, fileIds);
 	}
 
@@ -107,10 +114,10 @@ namespace wavplayeralsa {
 		std::stringstream handler_msg;
 		bool success;
 		if(file_id.empty()) {
-			success = player_action_callback_->StopPlayRequest(handler_msg);
+			success = current_song_action_callback_->StopPlayRequest(handler_msg);
 		}
 		else {
-			success = player_action_callback_->NewSongRequest(file_id, start_offset_ms, handler_msg);	
+			success = current_song_action_callback_->NewSongRequest(file_id, start_offset_ms, handler_msg);	
 		} 
 
 		if(!success) {
