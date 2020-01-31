@@ -19,20 +19,23 @@ namespace wavplayeralsa
         mqtt_service_(mqtt_service),
         ws_service_(ws_service),
         alsa_service_(alsa_service),
+        play_seq_id_(0),
         throttle_timer_(io_service)
     {
-        json j;
-		j["song_is_playing"] = false;
-		UpdateLastStatusMsg(j);
+
     }
 
     void CurrentSongController::Initialize(const std::string &player_uuid, const std::string &wav_dir)
     {
         player_uuid_ = player_uuid;
         wav_dir_ = boost::filesystem::path(wav_dir);
+
+        json j;
+		j["song_is_playing"] = false;
+		UpdateLastStatusMsg(j, play_seq_id_);
     }
 
-    void CurrentSongController::NewSongStatus(const std::string &file_id, uint64_t start_time_millis_since_epoch, double speed)
+    void CurrentSongController::NewSongStatus(const std::string &file_id, uint32_t play_seq_id, uint64_t start_time_millis_since_epoch, double speed)
     {
 		json j;
 		j["song_is_playing"] = true;
@@ -40,19 +43,23 @@ namespace wavplayeralsa
 		j["start_time_millis_since_epoch"] = start_time_millis_since_epoch;
 		j["speed"] = speed;
 
-        ios_.post(std::bind(&CurrentSongController::UpdateLastStatusMsg, this, j));
+        ios_.post(std::bind(&CurrentSongController::UpdateLastStatusMsg, this, j, play_seq_id));
     }
 
-    void CurrentSongController::NoSongPlayingStatus(const std::string &file_id)       
+    void CurrentSongController::NoSongPlayingStatus(const std::string &file_id, uint32_t play_seq_id)       
     {
 		json j;
 		j["song_is_playing"] = false;
 		j["stopped_file_id"] = file_id;
         
-        ios_.post(std::bind(&CurrentSongController::UpdateLastStatusMsg, this, j));
+        ios_.post(std::bind(&CurrentSongController::UpdateLastStatusMsg, this, j, play_seq_id));
     }
 
-	bool CurrentSongController::NewSongRequest(const std::string &file_id, uint64_t start_offset_ms, std::stringstream &out_msg) {
+	bool CurrentSongController::NewSongRequest(
+        const std::string &file_id, 
+        uint64_t start_offset_ms, 
+        std::stringstream &out_msg) 
+    {
 
 		if(file_id == alsa_service_->GetFileId()) {
 			out_msg << "changed position of the current file '" << file_id << "'. new position in ms is: " << start_offset_ms << std::endl;
@@ -100,7 +107,17 @@ namespace wavplayeralsa
 			}
 		}
 
-		alsa_service_->StartPlay(start_offset_ms);
+        uint32_t new_play_seq_id = play_seq_id_ + 1;
+        try {
+		    alsa_service_->StartPlay(start_offset_ms, new_play_seq_id);
+        }
+        catch(const std::runtime_error &e) {
+            out_msg << "playing new audio file '" << file_id << "' failed. currently player is not playing. " <<
+                "reason for failure: " << e.what();
+            return false;
+        }
+
+        play_seq_id_ = new_play_seq_id;
 		return true;
 	}
 
@@ -125,10 +142,11 @@ namespace wavplayeralsa
 		return true;
 	}
 
-	void CurrentSongController::UpdateLastStatusMsg(const json &alsa_data)
+	void CurrentSongController::UpdateLastStatusMsg(const json &alsa_data, uint32_t play_seq_id)
 	{
         json full_msg(alsa_data);
         full_msg["uuid"] = player_uuid_;
+        full_msg["play_seq_id"] = play_seq_id;
 
 		const std::string msg_json_str = full_msg.dump();
 

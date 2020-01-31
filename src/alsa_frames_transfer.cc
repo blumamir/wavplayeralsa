@@ -54,7 +54,7 @@ namespace wavplayeralsa {
 		initialized_ = true;
 	}
 
-	void AlsaFramesTransfer::CheckSongStartTime() {
+	void AlsaFramesTransfer::CheckSongStartTime(uint32_t play_seq_id) {
 		int err;
 		snd_pcm_sframes_t delay = 0;
 		int64_t pos_in_frames = 0;
@@ -81,7 +81,7 @@ namespace wavplayeralsa {
 		int64_t diff_from_prev = audio_file_start_time_ms_since_epoch - audio_start_time_ms_since_epoch_;
 		// there might be small jittering, we don't want to update the value often.
 		if(diff_from_prev > 1 || diff_from_prev < -1) {
-			player_events_callback_->NewSongStatus(file_id_, audio_file_start_time_ms_since_epoch, 1.0);
+			player_events_callback_->NewSongStatus(file_id_, play_seq_id, audio_file_start_time_ms_since_epoch, 1.0);
 
 			std::stringstream msg_stream;
 			msg_stream << "calculated a new audio file start time: " << audio_file_start_time_ms_since_epoch << " (ms since epoch). ";
@@ -96,21 +96,21 @@ namespace wavplayeralsa {
 
 	}
 
-	void AlsaFramesTransfer::TransferFramesWrapper() {
+	void AlsaFramesTransfer::TransferFramesWrapper(uint32_t play_seq_id) {
 
 		try {
 			alsa_ios_.reset();
-			alsa_ios_.post(std::bind(&AlsaFramesTransfer::FramesToPcmTransferLoop, this, boost::system::error_code()));
+			alsa_ios_.post(std::bind(&AlsaFramesTransfer::FramesToPcmTransferLoop, this, boost::system::error_code(), play_seq_id));
 			alsa_ios_.run();
 			PcmDrop();
 		}
 		catch(const std::runtime_error &e) {
 			logger_->error("error while playing current wav file. stopped transfering frames to alsa. exception is: {}", e.what());
 		}
-		player_events_callback_->NoSongPlayingStatus(file_id_);		
+		player_events_callback_->NoSongPlayingStatus(file_id_, play_seq_id);
 	}
 
-	void AlsaFramesTransfer::FramesToPcmTransferLoop(boost::system::error_code error_code) {
+	void AlsaFramesTransfer::FramesToPcmTransferLoop(boost::system::error_code error_code, uint32_t play_seq_id) {
 
 		// the function might be called from timer, in which case error_code might
 		// indicate the timer canceled and we should not invoke the function.
@@ -133,7 +133,7 @@ namespace wavplayeralsa {
 		}
 		else if(frames_to_deliver == 0) {
 			alsa_wait_timer_.expires_from_now(boost::posix_time::millisec(5));
-			alsa_wait_timer_.async_wait(std::bind(&AlsaFramesTransfer::FramesToPcmTransferLoop, this, std::placeholders::_1));
+			alsa_wait_timer_.async_wait(std::bind(&AlsaFramesTransfer::FramesToPcmTransferLoop, this, std::placeholders::_1, play_seq_id));
 			return;
 		}
 
@@ -151,7 +151,7 @@ namespace wavplayeralsa {
 		}
 		if(bytes_to_deliver == 0) {
 			logger_->info("done writing all frames to pcm. waiting for audio device to play remaining frames in the buffer");
-			alsa_ios_.post(std::bind(&AlsaFramesTransfer::PcmDrainLoop, this, boost::system::error_code()));
+			alsa_ios_.post(std::bind(&AlsaFramesTransfer::PcmDrainLoop, this, boost::system::error_code(), play_seq_id));
 			return;
 		}
 
@@ -168,12 +168,12 @@ namespace wavplayeralsa {
 			snd_file_.seek(curr_position_frames_, SEEK_SET);
 		}
 
-		CheckSongStartTime();
+		CheckSongStartTime(play_seq_id);
 
-		alsa_ios_.post(std::bind(&AlsaFramesTransfer::FramesToPcmTransferLoop, this, boost::system::error_code()));
+		alsa_ios_.post(std::bind(&AlsaFramesTransfer::FramesToPcmTransferLoop, this, boost::system::error_code(), play_seq_id));
 	}
 
-	void AlsaFramesTransfer::PcmDrainLoop(boost::system::error_code error_code) {
+	void AlsaFramesTransfer::PcmDrainLoop(boost::system::error_code error_code, uint32_t play_seq_id) {
 
 		bool is_currently_playing = IsAlsaStatePlaying();
 
@@ -182,10 +182,10 @@ namespace wavplayeralsa {
 			return;
 		}
 
-		CheckSongStartTime();
+		CheckSongStartTime(play_seq_id);
 
 		alsa_wait_timer_.expires_from_now(boost::posix_time::millisec(5));
-		alsa_wait_timer_.async_wait(std::bind(&AlsaFramesTransfer::PcmDrainLoop, this, std::placeholders::_1));
+		alsa_wait_timer_.async_wait(std::bind(&AlsaFramesTransfer::PcmDrainLoop, this, std::placeholders::_1, play_seq_id));
 	}
 
 	void AlsaFramesTransfer::PcmDrop() 
@@ -198,13 +198,14 @@ namespace wavplayeralsa {
 		}
 	}
 
-	bool AlsaFramesTransfer::IsAlsaStatePlaying() {
+	bool AlsaFramesTransfer::IsAlsaStatePlaying() 
+	{
 		int status = snd_pcm_state(alsa_playback_handle_);
 		return (status == SND_PCM_STATE_RUNNING) || (status == SND_PCM_STATE_PREPARED);
 	}
 
-	void AlsaFramesTransfer::StartPlay(uint32_t position_in_ms) {
-
+	void AlsaFramesTransfer::StartPlay(uint32_t position_in_ms, uint32_t play_seq_id) 
+	{
 		if(!snd_initialized_) {
 			throw std::runtime_error("the player is not initialized with a valid sound file.");
 		}
@@ -226,7 +227,7 @@ namespace wavplayeralsa {
 		}
 
 		logger_->info("start playing file {} from position {} mili-seconds ({} seconds)", file_id_, position_in_ms, position_in_seconds);
-		playing_thread_ = std::thread(&AlsaFramesTransfer::TransferFramesWrapper, this);
+		playing_thread_ = std::thread(&AlsaFramesTransfer::TransferFramesWrapper, this, play_seq_id);
 	}
 
 	/*

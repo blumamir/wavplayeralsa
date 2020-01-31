@@ -14,8 +14,8 @@ namespace wavplayeralsa {
 
 	public:
 
-		virtual void NewSongStatus(const std::string &file_id, uint64_t start_time_millis_since_epoch, double speed) = 0;
-		virtual void NoSongPlayingStatus(const std::string &file_id) = 0;
+		virtual void NewSongStatus(const std::string &file_id, uint32_t play_seq_id, uint64_t start_time_millis_since_epoch, double speed) = 0;
+		virtual void NoSongPlayingStatus(const std::string &file_id, uint32_t play_seq_id) = 0;
 
 
 	};

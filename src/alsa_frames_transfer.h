@@ -85,7 +85,7 @@ namespace wavplayeralsa {
 		// it should be canonical, so that each file is always identify uniquely
 		const std::string &GetFileId() const;
 		bool LoadNewFile(const std::string &full_file_name, const std::string &file_id);
-		void StartPlay(uint32_t position_in_ms);
+		void StartPlay(uint32_t position_in_ms, uint32_t play_seq_id);
 		bool Stop();
 
 	private:
@@ -94,12 +94,12 @@ namespace wavplayeralsa {
 		bool GetFormatForAlsa(snd_pcm_format_t &out_format) const;
 
 	private:
-		void TransferFramesWrapper();
+		void TransferFramesWrapper(uint32_t play_seq_id);
 		bool IsAlsaStatePlaying();
-		void CheckSongStartTime();
+		void CheckSongStartTime(uint32_t play_seq_id);
 		// once all frames are written to pcm, this function runs until pcm is empty
-		void PcmDrainLoop(boost::system::error_code error_code);
-		void FramesToPcmTransferLoop(boost::system::error_code error_code);
+		void PcmDrainLoop(boost::system::error_code error_code, uint32_t play_seq_id);
+		void FramesToPcmTransferLoop(boost::system::error_code error_code, uint32_t play_seq_id);
 		void PcmDrop();
 
 	private:
