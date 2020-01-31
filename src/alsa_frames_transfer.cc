@@ -1,6 +1,7 @@
 #include "alsa_frames_transfer.h"
 
 #include <iostream>
+#include <algorithm>
 #include <iomanip>
 #include <sstream>
 #include <stdlib.h>
@@ -63,7 +64,7 @@ namespace wavplayeralsa {
 			std::stringstream err_desc;
 			err_desc << "cannot query current offset in buffer (" << snd_strerror(err) << ")";
 			throw std::runtime_error(err_desc.str());
-		}	
+		}	 
 
 		// this is a magic number test to remove end of file wrong reporting
 		if(delay < 4096) {
@@ -139,7 +140,7 @@ namespace wavplayeralsa {
 
 		// we want to deliver as many frames as possible.
 		// we can put frames_to_deliver number of frames, but the buffer can only hold frames_capacity_in_buffer_ frames
-		frames_to_deliver = frames_to_deliver > frames_capacity_in_buffer_ ? frames_capacity_in_buffer_ : frames_to_deliver;
+		frames_to_deliver = std::min(frames_to_deliver, frames_capacity_in_buffer_);
 		unsigned int bytes_to_deliver = frames_to_deliver * bytes_per_frame_;
 
 		// read the frames from the file. TODO: what if readRaw fails?
@@ -154,7 +155,6 @@ namespace wavplayeralsa {
 			alsa_ios_.post(std::bind(&AlsaFramesTransfer::PcmDrainLoop, this, boost::system::error_code(), play_seq_id));
 			return;
 		}
-
 
 		int frames_written = snd_pcm_writei(alsa_playback_handle_, buffer_for_transfer, frames_to_deliver);
 		if( frames_written < 0) {
@@ -174,6 +174,9 @@ namespace wavplayeralsa {
 	}
 
 	void AlsaFramesTransfer::PcmDrainLoop(boost::system::error_code error_code, uint32_t play_seq_id) {
+
+		if(error_code)
+			return;
 
 		bool is_currently_playing = IsAlsaStatePlaying();
 
@@ -210,14 +213,14 @@ namespace wavplayeralsa {
 			throw std::runtime_error("the player is not initialized with a valid sound file.");
 		}
 
+		Stop();
+
 		double position_in_seconds = (double)position_in_ms / 1000.0;
 		curr_position_frames_ = position_in_seconds * (double)frame_rate_; 
 		if(curr_position_frames_ > total_frame_in_file_) {
 			curr_position_frames_ = total_frame_in_file_;
 		}
-		snd_file_.seek(curr_position_frames_, SEEK_SET);
-
-		Stop();
+		sf_count_t seek_res = snd_file_.seek(curr_position_frames_, SEEK_SET);
 
 		int err;
 		std::stringstream err_desc;
@@ -347,7 +350,7 @@ namespace wavplayeralsa {
 		int seconds_modulo = (number_of_ms / 1000) % 60;	
 
 		bytes_per_frame_ = num_of_channels_ * bytes_per_sample_;
-		frames_capacity_in_buffer_ = TRANSFER_BUFFER_SIZE / bytes_per_frame_;
+		frames_capacity_in_buffer_ = (snd_pcm_sframes_t)(TRANSFER_BUFFER_SIZE / bytes_per_frame_);
 
 		logger_->info("finished reading audio file '{}'. "
 			"Frame rate: {} frames per seconds, "

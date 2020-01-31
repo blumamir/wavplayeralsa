@@ -137,7 +137,7 @@ namespace wavplayeralsa {
 
 	    // calculated
 		unsigned int bytes_per_frame_ = 1;
-		unsigned int frames_capacity_in_buffer_ = 0; // how many frames can be stored in a buffer with size TRANSFER_BUFFER_SIZE
+		snd_pcm_sframes_t frames_capacity_in_buffer_ = 0; // how many frames can be stored in a buffer with size TRANSFER_BUFFER_SIZE
 
 	private:
 		// alsa frames transfer stuff
