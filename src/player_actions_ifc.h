@@ -15,8 +15,16 @@ namespace wavplayeralsa {
 	class CurrentSongActionsIfc {
 	
 	public:
-		virtual bool NewSongRequest(const std::string &file_id, uint64_t start_offset_ms, std::stringstream &out_msg) = 0;
-		virtual bool StopPlayRequest(std::stringstream &out_msg) = 0;
+
+		virtual bool NewSongRequest(
+			const std::string &file_id, 
+			uint64_t start_offset_ms, 
+			std::stringstream &out_msg,
+			uint32_t *play_seq_id) = 0;
+
+		virtual bool StopPlayRequest(
+			std::stringstream &out_msg, 
+			uint32_t *play_seq_id) = 0;
 	};
 
 	class PlayerFilesActionsIfc {

@@ -21,6 +21,7 @@ namespace wavplayeralsa {
 	public:
 		void Initialize(
 			std::shared_ptr<spdlog::logger> logger, 
+			const std::string &player_uuid,
 			boost::asio::io_service *io_service, 
 			CurrentSongActionsIfc *current_song_action_callback, 
 			PlayerFilesActionsIfc *player_files_action_callback, 
@@ -35,6 +36,7 @@ namespace wavplayeralsa {
 	private:
 		void WriteResponseBadRequest(std::shared_ptr<HttpServer::Response> response, const std::stringstream &err_stream);
 		void WriteResponseSuccess(std::shared_ptr<HttpServer::Response> response, const std::stringstream &body_stream);
+		void WriteJsonResponseBadRequest(std::shared_ptr<HttpServer::Response> response, const nlohmann::json &body_json);
 		void WriteJsonResponseSuccess(std::shared_ptr<HttpServer::Response> response, const nlohmann::json &body_json);
 
 	private:
@@ -42,6 +44,7 @@ namespace wavplayeralsa {
 		CurrentSongActionsIfc *current_song_action_callback_;
 		PlayerFilesActionsIfc *player_files_action_callback_;
 		std::shared_ptr<spdlog::logger> logger_;
+        std::string player_uuid_;
 
 	private:
 		// class private members

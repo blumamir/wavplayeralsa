@@ -12,6 +12,7 @@ namespace wavplayeralsa {
 
 	void HttpApi::Initialize(
 		std::shared_ptr<spdlog::logger> logger, 
+		const std::string &player_uuid,
 		boost::asio::io_service *io_service, 
 		CurrentSongActionsIfc *current_song_action_callback, 
 		PlayerFilesActionsIfc *player_files_action_callback, 
@@ -19,6 +20,7 @@ namespace wavplayeralsa {
 	{
 
 		// set class members
+		player_uuid_ = player_uuid;
 		current_song_action_callback_ = current_song_action_callback;
 		player_files_action_callback_ = player_files_action_callback;
 		logger_ = logger;
@@ -56,10 +58,17 @@ namespace wavplayeralsa {
 	  	logger_->info("http request succeeded. returning msg: {}", body);
 	}
 
+	void HttpApi::WriteJsonResponseBadRequest(std::shared_ptr<HttpServer::Response> response, const nlohmann::json &body_json)
+	{
+		std::string json_str = body_json.dump();
+		*response << "HTTP/1.1 400 Bad Request\r\nContent-Type: application/json\r\nContent-Length: " << json_str.size() << "\r\n\r\n" << json_str;		
+	  	logger_->error("http request failed. returning error string: {}", json_str);
+	}
+
 	void HttpApi::WriteJsonResponseSuccess(std::shared_ptr<HttpServer::Response> response, const json &body_json) {
-		std::string body = body_json.dump();
-		*response << "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: " << body.size() << "\r\n\r\n" << body;		
-	  	logger_->info("http request succeeded. returning msg: {}", body);
+		std::string json_str = body_json.dump();
+		*response << "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: " << json_str.size() << "\r\n\r\n" << json_str;		
+	  	logger_->info("http request succeeded. returning msg: {}", json_str);
 	}
 
 	void HttpApi::OnGetAvailableFiles(std::shared_ptr<HttpServer::Response> response, std::shared_ptr<HttpServer::Request> request) {
@@ -72,9 +81,9 @@ namespace wavplayeralsa {
 		logger_->info("http received put request for current-song: {}", request_json_str);
 
 		// parse to json
-		json j;
+		json request_json;
 		try {
-			j = json::parse(request_json_str);
+			request_json = json::parse(request_json_str);
 		}
 		catch(json::exception &e) {
 			std::stringstream err_stream;
@@ -85,9 +94,9 @@ namespace wavplayeralsa {
 
 		// validate song name
 		std::string file_id;
-		if(j.find("file_id") != j.end()) {
+		if(request_json.find("file_id") != request_json.end()) {
 			try {
-				file_id = j["file_id"].get<std::string>();
+				file_id = request_json["file_id"].get<std::string>();
 			}
 			catch(json::exception &e) {
 				std::stringstream err_stream;
@@ -99,9 +108,9 @@ namespace wavplayeralsa {
 
 		uint64_t start_offset_ms = 0;
 		// use it only if it is found in the json
-		if(j.find("start_offset_ms") != j.end()) {
+		if(request_json.find("start_offset_ms") != request_json.end()) {
 			try {
-				start_offset_ms = j["start_offset_ms"].get<uint64_t>();
+				start_offset_ms = request_json["start_offset_ms"].get<uint64_t>();
 			}
 			catch(json::exception &e) {
 				std::stringstream err_stream;
@@ -113,19 +122,29 @@ namespace wavplayeralsa {
 
 		std::stringstream handler_msg;
 		bool success;
+		uint32_t play_seq_id = 0;
 		if(file_id.empty()) {
-			success = current_song_action_callback_->StopPlayRequest(handler_msg);
+			success = current_song_action_callback_->StopPlayRequest(handler_msg, &play_seq_id);
 		}
 		else {
-			success = current_song_action_callback_->NewSongRequest(file_id, start_offset_ms, handler_msg);	
+			success = current_song_action_callback_->NewSongRequest(file_id, start_offset_ms, handler_msg, &play_seq_id);	
 		} 
 
-		if(!success) {
-			WriteResponseBadRequest(response, handler_msg);
-		    return;			
+		json response_json;
+		response_json["operation_desc"] = handler_msg.str();
+		response_json["uuid"] = player_uuid_;
+		if(play_seq_id > 0)
+		{
+			response_json["play_seq_id"] = play_seq_id;
 		}
 
-		WriteResponseSuccess(response, handler_msg);
+		if(!success) {
+			WriteJsonResponseBadRequest(response, response_json);
+		}
+		else {
+			WriteJsonResponseSuccess(response, response_json);			
+		}
+
 	}
 
 	void HttpApi::OnWebGet(std::shared_ptr<HttpServer::Response> response, std::shared_ptr<HttpServer::Request> request) {

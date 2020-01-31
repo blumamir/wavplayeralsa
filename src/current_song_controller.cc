@@ -58,7 +58,8 @@ namespace wavplayeralsa
 	bool CurrentSongController::NewSongRequest(
         const std::string &file_id, 
         uint64_t start_offset_ms, 
-        std::stringstream &out_msg) 
+        std::stringstream &out_msg,
+        uint32_t *play_seq_id) 
     {
 
 		if(file_id == alsa_service_->GetFileId()) {
@@ -118,10 +119,18 @@ namespace wavplayeralsa
         }
 
         play_seq_id_ = new_play_seq_id;
+        if(play_seq_id != nullptr)
+        {
+            *play_seq_id = play_seq_id_;
+        }
+
 		return true;
 	}
 
-	bool CurrentSongController::StopPlayRequest(std::stringstream &out_msg) {
+	bool CurrentSongController::StopPlayRequest(
+        std::stringstream &out_msg,
+        uint32_t *play_seq_id) 
+    {
 
 		bool was_playing = false;
 		try {
@@ -139,6 +148,12 @@ namespace wavplayeralsa
 		else {
 			out_msg << "current audio file '" << current_file_id << "' stopped playing";				
 		}
+
+        if(play_seq_id != nullptr)
+        {
+            *play_seq_id = play_seq_id_;
+        }
+
 		return true;
 	}
 

@@ -34,12 +34,18 @@ namespace wavplayeralsa {
         void NoSongPlayingStatus(const std::string &file_id, uint32_t play_seq_id);
 
     public:
+
     	// wavplayeralsa::CurrentSongActionsIfc
+
 		bool NewSongRequest(
             const std::string &file_id, 
             uint64_t start_offset_ms, 
-            std::stringstream &out_msg);
-		bool StopPlayRequest(std::stringstream &out_msg);
+            std::stringstream &out_msg,
+            uint32_t *play_seq_id);
+
+		bool StopPlayRequest(
+            std::stringstream &out_msg,
+            uint32_t *play_seq_id);
 
     private:
         void UpdateLastStatusMsg(const json &alsa_data, uint32_t play_seq_id);

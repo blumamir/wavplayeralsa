@@ -146,7 +146,7 @@ public:
 			alsa_frames_transfer_.Initialize(alsa_frames_transfer_logger_, &current_song_controller_, audio_device_);
 			audio_files_manager.Initialize(wav_dir_);
 			web_sockets_api_.Initialize(ws_api_logger_, &io_service_, ws_listen_port_);
-			http_api_.Initialize(http_api_logger_, &io_service_, &current_song_controller_, &audio_files_manager, http_listen_port_);
+			http_api_.Initialize(http_api_logger_, uuid_, &io_service_, &current_song_controller_, &audio_files_manager, http_listen_port_);
 
 			if(UseMqtt()) {
 				mqtt_api_.Initialize(mqtt_api_logger_, mqtt_host_, mqtt_port_);
@@ -162,7 +162,7 @@ public:
 
 		if(!initial_file_.empty()) {	
 		 	std::stringstream initial_file_play_status;
-			bool success = current_song_controller_.NewSongRequest(initial_file_, 0, initial_file_play_status);
+			bool success = current_song_controller_.NewSongRequest(initial_file_, 0, initial_file_play_status, nullptr);
 			if(!success) {
 				root_logger_->error("unable to play initial file. {}", initial_file_play_status.str());
 				exit(EXIT_FAILURE);
