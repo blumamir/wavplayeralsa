@@ -19,6 +19,7 @@ namespace wavplayeralsa {
 	    server_.clear_error_channels(websocketpp::log::alevel::all);
 	    server_.clear_access_channels(websocketpp::log::alevel::all);
 	    server_.init_asio(io_service);
+		server_.set_reuse_addr(true);
 	    server_.set_open_handler(websocketpp::lib::bind(&WebSocketsApi::OnOpen,this, websocketpp::lib::placeholders::_1));
     	server_.set_close_handler(websocketpp::lib::bind(&WebSocketsApi::OnClose,this, websocketpp::lib::placeholders::_1));
     	try {
