@@ -204,7 +204,11 @@ namespace wavplayeralsa {
 	bool AlsaFramesTransfer::IsAlsaStatePlaying() 
 	{
 		int status = snd_pcm_state(alsa_playback_handle_);
-		return (status == SND_PCM_STATE_RUNNING) || (status == SND_PCM_STATE_PREPARED);
+		// the code had SND_PCM_STATE_PREPARED as well.
+		// it is removed, to resolve issue of song start playing after end of file.
+		// the drain function would not finish since the status is 'SND_PCM_STATE_PREPARED'
+		// because no frames were sent to alsa.
+		return (status == SND_PCM_STATE_RUNNING); // || (status == SND_PCM_STATE_PREPARED);
 	}
 
 	void AlsaFramesTransfer::StartPlay(uint32_t position_in_ms, uint32_t play_seq_id) 
