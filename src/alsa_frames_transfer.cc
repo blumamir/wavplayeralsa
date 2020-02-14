@@ -81,21 +81,22 @@ namespace wavplayeralsa {
 
 		int64_t diff_from_prev = audio_file_start_time_ms_since_epoch - audio_start_time_ms_since_epoch_;
 		// there might be small jittering, we don't want to update the value often.
-		if(diff_from_prev > 1 || diff_from_prev < -1) {
-			player_events_callback_->NewSongStatus(file_id_, play_seq_id, audio_file_start_time_ms_since_epoch, 1.0);
+		if(diff_from_prev <= 1 && diff_from_prev >= -1)
+			return;
 
-			std::stringstream msg_stream;
-			msg_stream << "play_seq_id: " << play_seq_id << ". ";
-			msg_stream << "calculated a new audio file start time: " << audio_file_start_time_ms_since_epoch << " (ms since epoch). ";
-			if(audio_start_time_ms_since_epoch_ > 0) {
-				msg_stream << "this is a change since last calculation of " << diff_from_prev << " ms. ";
-			}
-			msg_stream << "pcm delay in frames as reported by alsa: " << delay << " and position in file is " << 
-				ms_since_audio_file_start << " ms. ";
-			logger_->info(msg_stream.str());
+		player_events_callback_->NewSongStatus(file_id_, play_seq_id, audio_file_start_time_ms_since_epoch, 1.0);
+
+		std::stringstream msg_stream;
+		msg_stream << "play_seq_id: " << play_seq_id << ". ";
+		msg_stream << "calculated a new audio file start time: " << audio_file_start_time_ms_since_epoch << " (ms since epoch). ";
+		if(audio_start_time_ms_since_epoch_ > 0) {
+			msg_stream << "this is a change since last calculation of " << diff_from_prev << " ms. ";
 		}
-		audio_start_time_ms_since_epoch_ = audio_file_start_time_ms_since_epoch;
+		msg_stream << "pcm delay in frames as reported by alsa: " << delay << " and position in file is " << 
+			ms_since_audio_file_start << " ms. ";
+		logger_->info(msg_stream.str());
 
+		audio_start_time_ms_since_epoch_ = audio_file_start_time_ms_since_epoch;
 	}
 
 	void AlsaFramesTransfer::TransferFramesWrapper(uint32_t play_seq_id) {
