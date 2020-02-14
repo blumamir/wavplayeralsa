@@ -85,6 +85,7 @@ namespace wavplayeralsa {
 			player_events_callback_->NewSongStatus(file_id_, play_seq_id, audio_file_start_time_ms_since_epoch, 1.0);
 
 			std::stringstream msg_stream;
+			msg_stream << "play_seq_id: " << play_seq_id << ". ";
 			msg_stream << "calculated a new audio file start time: " << audio_file_start_time_ms_since_epoch << " (ms since epoch). ";
 			if(audio_start_time_ms_since_epoch_ > 0) {
 				msg_stream << "this is a change since last calculation of " << diff_from_prev << " ms. ";
@@ -106,8 +107,9 @@ namespace wavplayeralsa {
 			PcmDrop();
 		}
 		catch(const std::runtime_error &e) {
-			logger_->error("error while playing current wav file. stopped transfering frames to alsa. exception is: {}", e.what());
+			logger_->error("play_seq_id: {}. error while playing current wav file. stopped transfering frames to alsa. exception is: {}", play_seq_id, e.what());
 		}
+		logger_->info("play_seq_id: {}. handling done", play_seq_id);
 		player_events_callback_->NoSongPlayingStatus(file_id_, play_seq_id);
 	}
 
@@ -151,7 +153,7 @@ namespace wavplayeralsa {
 			throw std::runtime_error(err_desc.str());				
 		}
 		if(bytes_to_deliver == 0) {
-			logger_->info("done writing all frames to pcm. waiting for audio device to play remaining frames in the buffer");
+			logger_->info("play_seq_id: {}. done writing all frames to pcm. waiting for audio device to play remaining frames in the buffer", play_seq_id);
 			alsa_ios_.post(std::bind(&AlsaFramesTransfer::PcmDrainLoop, this, boost::system::error_code(), play_seq_id));
 			return;
 		}
@@ -164,7 +166,7 @@ namespace wavplayeralsa {
 
 		curr_position_frames_ += frames_written;
 		if(frames_written != frames_to_deliver) {
-			logger_->warn("transfered to alsa less frame then requested. frames_to_deliver: {}, frames_written: {}", frames_to_deliver, frames_written);
+			logger_->warn("play_seq_id: {}. transfered to alsa less frame then requested. frames_to_deliver: {}, frames_written: {}", play_seq_id, frames_to_deliver, frames_written);
 			snd_file_.seek(curr_position_frames_, SEEK_SET);
 		}
 
@@ -181,7 +183,7 @@ namespace wavplayeralsa {
 		bool is_currently_playing = IsAlsaStatePlaying();
 
 		if(!is_currently_playing) {
-			logger_->info("playing audio file ended successfully (transfered all frames to pcm and it is empty)");
+			logger_->info("play_seq_id: {}. playing audio file ended successfully (transfered all frames to pcm and it is empty).", play_seq_id);
 			return;
 		}
 
