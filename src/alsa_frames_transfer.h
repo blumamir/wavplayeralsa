@@ -143,8 +143,7 @@ namespace wavplayeralsa {
 		// alsa frames transfer stuff
 		snd_pcm_t *alsa_playback_handle_;
 
-		static const int AVAIL_MIN = 4096; // tells alsa to return from wait when buffer has this size of free space
-		static const int TRANSFER_BUFFER_SIZE = 4096 * 16; // 64KB this is the buffer used to pass frames to alsa. this is the maximum number of frames to pass as one chunk
+		static const int TRANSFER_BUFFER_SIZE = 4096 * 16; // 64KB this is the buffer used to pass frames to alsa. this is the maximum number of bytes to pass as one chunk
 
 		// what is the next frame to be delivered to alsa
 		uint64_t curr_position_frames_ = 0;

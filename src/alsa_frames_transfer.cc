@@ -506,15 +506,6 @@ namespace wavplayeralsa {
 			throw std::runtime_error(err_desc.str());
 		}
 
-		// we transfer frames to alsa buffers, and then call snd_pcm_wait and block until buffer
-		// has more space for next frames.
-		// this parameter is the amount of min availible frames in the buffer that should trigger
-		// alsa to notify us for writing more frames.
-		if( (err = snd_pcm_sw_params_set_avail_min(alsa_playback_handle_, sw_params, AVAIL_MIN)) < 0) {
-			err_desc << "cannot set minimum available count (" << snd_strerror(err) << ")";
-			throw std::runtime_error(err_desc.str());
-		}	
-
 		// how many frames should be in the buffer before alsa start to play it.
 		// we set to 0 -> means start playing immediately
 		if( (err = snd_pcm_sw_params_set_start_threshold(alsa_playback_handle_, sw_params, 0U)) < 0) {
