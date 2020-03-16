@@ -11,6 +11,7 @@
 #include "mqtt_api.h"
 #include "web_sockets_api.h"
 #include "alsa_frames_transfer.h"
+#include "services/alsa_service.h"
 
 using json = nlohmann::json;
 
@@ -25,7 +26,8 @@ namespace wavplayeralsa {
         CurrentSongController(boost::asio::io_service &io_service, 
             MqttApi *mqtt_service, 
             WebSocketsApi *ws_service, 
-            AlsaFramesTransfer *alsa_service);
+            AlsaFramesTransfer *alsa_service,
+            AlsaPlaybackServiceFactory *alsa_playback_service_factory);
 
         void Initialize(const std::string &player_uuid, const std::string &wav_dir);
 
@@ -56,6 +58,7 @@ namespace wavplayeralsa {
         MqttApi *mqtt_service_;
         WebSocketsApi *ws_service_;
         AlsaFramesTransfer *alsa_service_ = nullptr;
+        AlsaPlaybackServiceFactory *alsa_playback_service_factory_;
 
     private:
         // static config

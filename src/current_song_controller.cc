@@ -10,17 +10,19 @@ namespace wavplayeralsa
 {
 
     CurrentSongController::CurrentSongController(
-        boost::asio::io_service &io_service, 
-        MqttApi *mqtt_service, 
-        WebSocketsApi *ws_service,
-        AlsaFramesTransfer *alsa_service)
-            : 
-        ios_(io_service), 
-        mqtt_service_(mqtt_service),
-        ws_service_(ws_service),
-        alsa_service_(alsa_service),
-        play_seq_id_(0),
-        throttle_timer_(io_service)
+			boost::asio::io_service &io_service, 
+			MqttApi *mqtt_service,  
+			WebSocketsApi *ws_service,
+			AlsaFramesTransfer *alsa_service,
+			AlsaPlaybackServiceFactory *alsa_playback_service_factory
+		) : 
+			ios_(io_service), 
+			mqtt_service_(mqtt_service),
+			ws_service_(ws_service),
+			alsa_service_(alsa_service),
+			alsa_playback_service_factory_(alsa_playback_service_factory),
+			play_seq_id_(0),
+			throttle_timer_(io_service)
     {
 
     }
@@ -82,6 +84,11 @@ namespace wavplayeralsa
 			try {
 				const std::string prev_file = alsa_service_->GetFileId();
 				bool prev_file_was_playing = alsa_service_->LoadNewFile(canonicalFullPath, file_id);
+
+				IAlsaPlaybackService *alsa_service = alsa_playback_service_factory_->CreateAlsaPlaybackService(
+					canonicalFullPath, 
+					file_id
+				);
 
 				// message printing
 				const int SECONDS_PER_HOUR = (60 * 60);

@@ -11,6 +11,7 @@
 
 #include "cxxopts/cxxopts.hpp"
 #include "spdlog/spdlog.h"
+#include "spdlog/async.h"
 #include "spdlog/sinks/basic_file_sink.h"
 #include "spdlog/sinks/stdout_color_sinks.h"
 
@@ -20,6 +21,7 @@
 #include "alsa_frames_transfer.h"
 #include "audio_files_manager.h"
 #include "current_song_controller.h"
+#include "services/alsa_service.h"
 
 
 /*
@@ -33,7 +35,12 @@ public:
 		web_sockets_api_(),
 		io_service_work_(io_service_),
 		mqtt_api_(io_service_),
-		current_song_controller_(io_service_, &mqtt_api_, &web_sockets_api_, &alsa_frames_transfer_)
+		current_song_controller_(
+			io_service_, 
+			&mqtt_api_, 
+			&web_sockets_api_, 
+			&alsa_frames_transfer_,
+			&alsa_playback_service_factory_)
 	{
 
 	}
@@ -96,11 +103,15 @@ public:
 	}
 
 	// create an initialize all the required loggers.
-	// we do not want to work without loggers.
+	// we do not want to run without loggers.
 	// if the function is unable to create a logger, it will print to stderr, and terminate the application
 	void CreateLoggers(const char *command_name) {
 
 		try {
+
+			// default thread pool settings can be modified *before* creating the async logger:
+			// spdlog::init_thread_pool(8192, 1); // queue with 8k items and 1 backing thread.			
+			spdlog::init_thread_pool(8192, 1);
 
 			// create two logger sinks
 			std::vector<spdlog::sink_ptr> sinks;
@@ -123,6 +134,7 @@ public:
 			ws_api_logger_ = root_logger_->clone("ws_api");
 			mqtt_api_logger_ = root_logger_->clone("mqtt_api");
 			alsa_frames_transfer_logger_ = root_logger_->clone("alsa_frames_transfer");
+			alsa_playback_service_factory_logger = root_logger_->clone("alsa_playback_service_factory");
 		}
 		catch(const std::exception &e) {
 			std::cerr << "Unable to create loggers. error is: " << e.what() << std::endl;
@@ -142,11 +154,20 @@ public:
 	// can throw exception
 	void InitializeComponents() {
 		try {
-			current_song_controller_.Initialize(uuid_, wav_dir_);
 			alsa_frames_transfer_.Initialize(alsa_frames_transfer_logger_, &current_song_controller_, audio_device_);
 			audio_files_manager.Initialize(wav_dir_);
 			web_sockets_api_.Initialize(ws_api_logger_, &io_service_, ws_listen_port_);
 			http_api_.Initialize(http_api_logger_, uuid_, &io_service_, &current_song_controller_, &audio_files_manager, http_listen_port_);
+
+			// controllers
+			current_song_controller_.Initialize(uuid_, wav_dir_);
+
+			// services
+
+			alsa_playback_service_factory_.Initialize(
+				alsa_playback_service_factory_logger,
+				audio_device_
+			);
 
 			if(UseMqtt()) {
 				mqtt_api_.Initialize(mqtt_api_logger_, mqtt_host_, mqtt_port_);
@@ -246,6 +267,7 @@ private:
 	std::shared_ptr<spdlog::logger> mqtt_api_logger_;
 	std::shared_ptr<spdlog::logger> ws_api_logger_;
 	std::shared_ptr<spdlog::logger> alsa_frames_transfer_logger_;
+	std::shared_ptr<spdlog::logger> alsa_playback_service_factory_logger;
 
 private:
 	std::string uuid_;
@@ -257,6 +279,7 @@ private:
 	wavplayeralsa::MqttApi mqtt_api_;
 	wavplayeralsa::AudioFilesManager audio_files_manager;
 	wavplayeralsa::AlsaFramesTransfer alsa_frames_transfer_;
+	wavplayeralsa::AlsaPlaybackServiceFactory alsa_playback_service_factory_;
 
 	wavplayeralsa::CurrentSongController current_song_controller_;
 
