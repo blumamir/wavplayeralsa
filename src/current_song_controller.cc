@@ -112,7 +112,7 @@ namespace wavplayeralsa
 
         uint32_t new_play_seq_id = play_seq_id_ + 1;
         try {
-			alsa_service_->Play(start_offset_ms);
+			alsa_service_->Play(start_offset_ms, new_play_seq_id);
         }
         catch(const std::runtime_error &e) {
             out_msg << "playing new audio file '" << file_id << "' failed. currently player is not playing. " <<

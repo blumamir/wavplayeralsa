@@ -3,6 +3,8 @@
 
 #include "spdlog/spdlog.h"
 
+#include "player_events_ifc.h"
+
 namespace wavplayeralsa
 {
 
@@ -14,7 +16,7 @@ namespace wavplayeralsa
 
     public:
         virtual const std::string GetFileId() const = 0;
-        virtual void Play(int32_t offset_in_ms) = 0;
+        virtual void Play(int32_t offset_in_ms, uint32_t play_seq_id) = 0;
         virtual bool Stop() = 0;
 
     };
@@ -25,6 +27,7 @@ namespace wavplayeralsa
     public:
         void Initialize(
             std::shared_ptr<spdlog::logger> logger,
+            PlayerEventsIfc *player_events_callback,
             const std::string &audio_device
         );
 
@@ -40,6 +43,7 @@ namespace wavplayeralsa
 		std::shared_ptr<spdlog::logger> logger_;
 
     private:
+        PlayerEventsIfc *player_events_callback_;
         std::string audio_device_;
 
     };

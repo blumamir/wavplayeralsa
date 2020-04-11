@@ -166,6 +166,7 @@ public:
 
 			alsa_playback_service_factory_.Initialize(
 				alsa_playback_service_factory_logger,
+				&current_song_controller_,
 				audio_device_
 			);
 

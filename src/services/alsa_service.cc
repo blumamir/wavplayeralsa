@@ -21,6 +21,7 @@ namespace wavplayeralsa
 
         AlsaPlaybackService(
             std::shared_ptr<spdlog::logger> logger,
+			PlayerEventsIfc *player_events_callback_,
             const std::string &full_file_name, 
             const std::string &file_id,
 			const std::string &audio_device
@@ -29,7 +30,7 @@ namespace wavplayeralsa
 		~AlsaPlaybackService();
 
 	public:
-		void Play(int32_t offset_in_ms);
+		void Play(int32_t offset_in_ms, uint32_t play_seq_id);
 		bool Stop();
 		const std::string GetFileId() const { return file_id_; }
 
@@ -92,18 +93,21 @@ namespace wavplayeralsa
 	// postions reporting
 	private:
 		uint64_t audio_start_time_ms_since_epoch_ = 0;
+		PlayerEventsIfc *player_events_callback_ = nullptr;
 		
     };
 
     AlsaPlaybackService::AlsaPlaybackService(
             std::shared_ptr<spdlog::logger> logger,
+			PlayerEventsIfc *player_events_callback,
             const std::string &full_file_name, 
             const std::string &file_id,
 			const std::string &audio_device
         ) :
 			file_id_(file_id),
             logger_(logger),
-			alsa_wait_timer_(ios_)
+			alsa_wait_timer_(ios_),
+			player_events_callback_(player_events_callback)
     {
         InitSndFile(full_file_name);
 		InitAlsa(audio_device);
@@ -387,10 +391,14 @@ namespace wavplayeralsa
 		return false;
 	}
 
-	void AlsaPlaybackService::Play(int32_t offset_in_ms) {
+	void AlsaPlaybackService::Play(int32_t offset_in_ms, uint32_t play_seq_id) {
 		
 		if(!initialized_) {
 			throw std::runtime_error("tried to play wav file on an uninitialzed alsa service");
+		}
+
+		if(ios_.stopped()) {
+			throw std::runtime_error("this instance of alsa playback service has already played in the past. it cannot be reused. create a new instance to play again");
 		}
 
 		double position_in_seconds = (double)offset_in_ms / 1000.0;
@@ -400,7 +408,6 @@ namespace wavplayeralsa
 		}
 		sf_count_t seek_res = snd_file_.seek(curr_position_frames_, SEEK_SET);
 
-		uint32_t play_seq_id = 0;
 		logger_->info("start playing file {} from position {} mili-seconds ({} seconds)", file_id_, offset_in_ms, position_in_seconds);
 		playing_thread_ = std::thread(&AlsaPlaybackService::PlayingThreadMain, this, play_seq_id);
 	}
@@ -428,7 +435,7 @@ namespace wavplayeralsa
 			logger_->error("play_seq_id: {}. error while playing current wav file. stopped transfering frames to alsa. exception is: {}", play_seq_id, e.what());
 		}
 		logger_->info("play_seq_id: {}. handling done", play_seq_id);
-		// player_events_callback_->NoSongPlayingStatus(file_id_, play_seq_id);
+		player_events_callback_->NoSongPlayingStatus(file_id_, play_seq_id);
 		ios_.stop();
 	}
 
@@ -551,7 +558,7 @@ namespace wavplayeralsa
 		if(diff_from_prev <= 1 && diff_from_prev >= -1)
 			return;
 
-		// player_events_callback_->NewSongStatus(file_id_, play_seq_id, audio_file_start_time_ms_since_epoch, 1.0);
+		player_events_callback_->NewSongStatus(file_id_, play_seq_id, audio_file_start_time_ms_since_epoch, 1.0);
 
 		std::stringstream msg_stream;
 		msg_stream << "play_seq_id: " << play_seq_id << ". ";
@@ -578,10 +585,12 @@ namespace wavplayeralsa
 
     void AlsaPlaybackServiceFactory::Initialize(
             std::shared_ptr<spdlog::logger> logger,
+			PlayerEventsIfc *player_events_callback,
             const std::string &audio_device
         )
     {
         logger_ = logger;
+		player_events_callback_ = player_events_callback;
         audio_device_ = audio_device;
     }
 
@@ -592,6 +601,7 @@ namespace wavplayeralsa
     {
         return new AlsaPlaybackService(
             logger_->clone("alsa_playback_service"), // TODO - use file name or id
+			player_events_callback_,
             full_file_name,
             file_id,
 			audio_device_
