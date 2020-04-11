@@ -13,7 +13,7 @@ namespace wavplayeralsa
         virtual ~IAlsaPlaybackService() { }
 
     public:
-
+        virtual void Play(int32_t offset_in_ms) = 0;
 
     };
 

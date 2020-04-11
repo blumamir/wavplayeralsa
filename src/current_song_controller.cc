@@ -83,12 +83,13 @@ namespace wavplayeralsa
 
 			try {
 				const std::string prev_file = alsa_service_->GetFileId();
-				bool prev_file_was_playing = alsa_service_->LoadNewFile(canonicalFullPath, file_id);
+				bool prev_file_was_playing = false; //alsa_service_->LoadNewFile(canonicalFullPath, file_id);
 
 				IAlsaPlaybackService *alsa_service = alsa_playback_service_factory_->CreateAlsaPlaybackService(
 					canonicalFullPath, 
-					file_id
+					file_id	
 				);
+				alsa_service->Play(start_offset_ms);
 
 				// message printing
 				const int SECONDS_PER_HOUR = (60 * 60);
@@ -117,7 +118,7 @@ namespace wavplayeralsa
 
         uint32_t new_play_seq_id = play_seq_id_ + 1;
         try {
-		    alsa_service_->StartPlay(start_offset_ms, new_play_seq_id);
+		    // alsa_service_->StartPlay(start_offset_ms, new_play_seq_id);
         }
         catch(const std::runtime_error &e) {
             out_msg << "playing new audio file '" << file_id << "' failed. currently player is not playing. " <<
