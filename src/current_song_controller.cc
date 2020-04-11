@@ -19,7 +19,6 @@ namespace wavplayeralsa
 			ios_(io_service), 
 			mqtt_service_(mqtt_service),
 			ws_service_(ws_service),
-			alsa_service_(alsa_service),
 			alsa_playback_service_factory_(alsa_playback_service_factory),
 			play_seq_id_(0),
 			throttle_timer_(io_service)
@@ -64,7 +63,7 @@ namespace wavplayeralsa
         uint32_t *play_seq_id) 
     {
 
-		if(file_id == alsa_service_->GetFileId()) {
+		if(alsa_service_ && (file_id == alsa_service_->GetFileId())) {
 			out_msg << "changed position of the current file '" << file_id << "'. new position in ms is: " << start_offset_ms << std::endl;
 		}
 		else {
@@ -82,14 +81,13 @@ namespace wavplayeralsa
 			}
 
 			try {
-				const std::string prev_file = alsa_service_->GetFileId();
+				const std::string prev_file = ""; //alsa_service_->GetFileId();
 				bool prev_file_was_playing = false; //alsa_service_->LoadNewFile(canonicalFullPath, file_id);
 
-				IAlsaPlaybackService *alsa_service = alsa_playback_service_factory_->CreateAlsaPlaybackService(
+				alsa_service_ = alsa_playback_service_factory_->CreateAlsaPlaybackService(
 					canonicalFullPath, 
 					file_id	
 				);
-				alsa_service->Play(start_offset_ms);
 
 				// message printing
 				const int SECONDS_PER_HOUR = (60 * 60);
@@ -118,6 +116,7 @@ namespace wavplayeralsa
 
         uint32_t new_play_seq_id = play_seq_id_ + 1;
         try {
+			alsa_service_->Play(start_offset_ms);
 		    // alsa_service_->StartPlay(start_offset_ms, new_play_seq_id);
         }
         catch(const std::runtime_error &e) {

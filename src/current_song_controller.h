@@ -57,8 +57,9 @@ namespace wavplayeralsa {
         boost::asio::io_service &ios_;
         MqttApi *mqtt_service_;
         WebSocketsApi *ws_service_;
-        AlsaFramesTransfer *alsa_service_ = nullptr;
+        // AlsaFramesTransfer *alsa_service_ = nullptr;
         AlsaPlaybackServiceFactory *alsa_playback_service_factory_;
+        IAlsaPlaybackService *alsa_service_ = nullptr;
 
     private:
         // static config

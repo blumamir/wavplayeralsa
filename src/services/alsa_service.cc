@@ -30,6 +30,8 @@ namespace wavplayeralsa
 
 	public:
 		void Play(int32_t offset_in_ms);
+		bool Stop();
+		const std::string GetFileId() const { return file_id_; }
 
     private:
 
@@ -401,6 +403,16 @@ namespace wavplayeralsa
 		playing_thread_ = std::thread(&AlsaPlaybackService::PlayingThreadMain, this, play_seq_id);
 	}
 
+	bool AlsaPlaybackService::Stop() {
+
+		bool was_playing = playing_thread_.joinable() && !ios_.stopped();
+
+		alsa_wait_timer_.cancel();
+		ios_.stop();
+		playing_thread_.join();
+		return was_playing;
+	}
+
 	void AlsaPlaybackService::PlayingThreadMain(uint32_t play_seq_id) {
 
 		try {
@@ -413,6 +425,7 @@ namespace wavplayeralsa
 		}
 		logger_->info("play_seq_id: {}. handling done", play_seq_id);
 		// player_events_callback_->NoSongPlayingStatus(file_id_, play_seq_id);
+		ios_.stop();
 	}
 
 	void AlsaPlaybackService::FramesToPcmTransferLoop(boost::system::error_code error_code, uint32_t play_seq_id) {
