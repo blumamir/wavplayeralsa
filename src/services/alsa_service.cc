@@ -112,6 +112,8 @@ namespace wavplayeralsa
 
 	AlsaPlaybackService::~AlsaPlaybackService() {
 
+		this->Stop();
+
 		if(alsa_playback_handle_ != nullptr) {
 			snd_pcm_close(alsa_playback_handle_);
 			alsa_playback_handle_ = nullptr;
@@ -409,7 +411,9 @@ namespace wavplayeralsa
 
 		alsa_wait_timer_.cancel();
 		ios_.stop();
-		playing_thread_.join();
+		if(playing_thread_.joinable()) {
+			playing_thread_.join();
+		}
 		return was_playing;
 	}
 
