@@ -106,11 +106,11 @@ namespace wavplayeralsa {
 			}
 		}
 
-		uint64_t start_offset_ms = 0;
+		int64_t start_offset_ms = 0;
 		// use it only if it is found in the json
 		if(request_json.find("start_offset_ms") != request_json.end()) {
 			try {
-				start_offset_ms = request_json["start_offset_ms"].get<uint64_t>();
+				start_offset_ms = request_json["start_offset_ms"].get<int64_t>();
 			}
 			catch(json::exception &e) {
 				std::stringstream err_stream;

@@ -42,6 +42,7 @@ example with curl:
 ```
 curl -X PUT -H "Content-Type: application/json" -d "{\"file_id\": \"<file_name>.wav\", \"start_offset_ms\":0}" "http://127.0.0.1:8080/api/current-song"
 ```
+`start_offset_ms` can be negative, in which case song will start to play in the future.
 
 To stop an audio file which is currently playing, send a json to uri http://YOUR_IP:HTTP_LISTEN_PORT/api/current-song with empty or missing 'file_id':
 `{ "file_id": "" }` or `{}`
