@@ -39,7 +39,7 @@ namespace wavplayeralsa {
 
 		bool NewSongRequest(
             const std::string &file_id, 
-            uint64_t start_offset_ms, 
+            int64_t start_offset_ms, 
             std::stringstream &out_msg,
             uint32_t *play_seq_id);
 

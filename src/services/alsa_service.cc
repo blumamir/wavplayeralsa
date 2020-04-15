@@ -31,7 +31,7 @@ namespace wavplayeralsa
 		~AlsaPlaybackService();
 
 	public:
-		void Play(int32_t offset_in_ms);
+		void Play(int64_t offset_in_ms);
 		bool Stop();
 		const std::string GetFileId() const { return file_id_; }
 
@@ -66,7 +66,7 @@ namespace wavplayeralsa
 		snd_pcm_t *alsa_playback_handle_ = nullptr;
 
 		// what is the next frame to be delivered to alsa
-		uint64_t curr_position_frames_ = 0;
+		int64_t curr_position_frames_ = 0;
 
     // snd file
     private:
@@ -395,8 +395,8 @@ namespace wavplayeralsa
 		return false;
 	}
 
-	void AlsaPlaybackService::Play(int32_t offset_in_ms) {
-		
+	void AlsaPlaybackService::Play(int64_t offset_in_ms) {
+
 		if(!initialized_) {
 			throw std::runtime_error("tried to play wav file on an uninitialzed alsa service");
 		}
@@ -406,11 +406,11 @@ namespace wavplayeralsa
 		}
 
 		double position_in_seconds = (double)offset_in_ms / 1000.0;
-		curr_position_frames_ = position_in_seconds * (double)frame_rate_; 
-		if(curr_position_frames_ > total_frame_in_file_) {
-			curr_position_frames_ = total_frame_in_file_;
+		curr_position_frames_ = position_in_seconds * (double)frame_rate_;
+		curr_position_frames_ = std::min(curr_position_frames_, (int64_t)total_frame_in_file_);
+		if(curr_position_frames_ >= 0) {
+			sf_count_t seek_res = snd_file_.seek(curr_position_frames_, SEEK_SET);
 		}
-		sf_count_t seek_res = snd_file_.seek(curr_position_frames_, SEEK_SET);
 
 		logger_->info("start playing file {} from position {} mili-seconds ({} seconds)", file_id_, offset_in_ms, position_in_seconds);
 		playing_thread_ = std::thread(&AlsaPlaybackService::PlayingThreadMain, this);
@@ -473,19 +473,28 @@ namespace wavplayeralsa
 		// we want to deliver as many frames as possible.
 		// we can put frames_to_deliver number of frames, but the buffer can only hold frames_capacity_in_buffer_ frames
 		frames_to_deliver = std::min(frames_to_deliver, frames_capacity_in_buffer_);
-		unsigned int bytes_to_deliver = frames_to_deliver * bytes_per_frame_;
 
 		// read the frames from the file. TODO: what if readRaw fails?
 		char buffer_for_transfer[TRANSFER_BUFFER_SIZE];
-		bytes_to_deliver = snd_file_.readRaw(buffer_for_transfer, bytes_to_deliver);
-		if(bytes_to_deliver < 0) {
-			err_desc << "Failed reading raw frames from snd file. returned: " << sf_error_number(bytes_to_deliver);
-			throw std::runtime_error(err_desc.str());				
+		
+		bool start_in_future = (curr_position_frames_ < 0);
+		if(!start_in_future) {
+			unsigned int bytes_to_deliver = frames_to_deliver * bytes_per_frame_;
+			bytes_to_deliver = snd_file_.readRaw(buffer_for_transfer, bytes_to_deliver);
+			if(bytes_to_deliver < 0) {
+				err_desc << "Failed reading raw frames from snd file. returned: " << sf_error_number(bytes_to_deliver);
+				throw std::runtime_error(err_desc.str());				
+			}
+			if(bytes_to_deliver == 0) {
+				logger_->info("play_seq_id: {}. done writing all frames to pcm. waiting for audio device to play remaining frames in the buffer", play_seq_id_);
+				ios_.post(std::bind(&AlsaPlaybackService::PcmDrainLoop, this, boost::system::error_code()));
+				return;
+			}
 		}
-		if(bytes_to_deliver == 0) {
-			logger_->info("play_seq_id: {}. done writing all frames to pcm. waiting for audio device to play remaining frames in the buffer", play_seq_id_);
-			ios_.post(std::bind(&AlsaPlaybackService::PcmDrainLoop, this, boost::system::error_code()));
-			return;
+		else {
+			frames_to_deliver = std::min(frames_to_deliver, (snd_pcm_sframes_t)-curr_position_frames_);
+			unsigned int bytes_to_deliver = frames_to_deliver * bytes_per_frame_;
+			bzero(buffer_for_transfer, bytes_to_deliver);
 		}
 
 		int frames_written = snd_pcm_writei(alsa_playback_handle_, buffer_for_transfer, frames_to_deliver);
@@ -495,7 +504,7 @@ namespace wavplayeralsa
 		}
 
 		curr_position_frames_ += frames_written;
-		if(frames_written != frames_to_deliver) {
+		if( (curr_position_frames_ >= 0) && (start_in_future || (frames_written != frames_to_deliver))) {
 			logger_->warn("play_seq_id: {}. transfered to alsa less frame then requested. frames_to_deliver: {}, frames_written: {}", play_seq_id_, frames_to_deliver, frames_written);
 			snd_file_.seek(curr_position_frames_, SEEK_SET);
 		}
@@ -536,7 +545,6 @@ namespace wavplayeralsa
 	void AlsaPlaybackService::CheckSongStartTime() {
 		int err;
 		snd_pcm_sframes_t delay = 0;
-		int64_t pos_in_frames = 0;
 
 		if( (err = snd_pcm_delay(alsa_playback_handle_, &delay)) < 0) {
 			std::stringstream err_desc;
@@ -548,7 +556,7 @@ namespace wavplayeralsa
 		if(delay < 4096) {
 			return;
 		}
-		pos_in_frames = curr_position_frames_ - delay; 			
+		int64_t pos_in_frames = curr_position_frames_ - delay;
 		int64_t ms_since_audio_file_start = ((pos_in_frames * (int64_t)1000) / (int64_t)frame_rate_);
 
 		struct timeval tv;
