@@ -115,7 +115,11 @@ namespace wavplayeralsa
 			out_msg << "starting at position " << start_offset_ms << " ms " <<
 				"(" << hours << ":" << 
 				std::setfill('0') << std::setw(2) << minutes << ":" << 
-				std::setfill('0') << std::setw(2) << seconds << ")";
+				std::setfill('0') << std::setw(2) << seconds;
+			if(start_offset_ms < 0) {
+				out_msg << " in the future";
+			}
+			out_msg << ")";
 		}
 
         try {
