@@ -71,6 +71,14 @@ namespace wavplayeralsa
 			alsa_service_ = nullptr;
 		}
 
+		// create a new unique id for this play
+		uint32_t new_play_seq_id = play_seq_id_ + 1;
+        play_seq_id_ = new_play_seq_id;
+        if(play_seq_id != nullptr)
+        {
+            *play_seq_id = play_seq_id_;
+        }
+
 		boost::filesystem::path songPathInWavDir(file_id);
 		boost::filesystem::path songFullPath = wav_dir_ / songPathInWavDir;
 		std::string canonicalFullPath;
@@ -78,7 +86,8 @@ namespace wavplayeralsa
 			canonicalFullPath = boost::filesystem::canonical(songFullPath).string();
 			alsa_service_ = alsa_playback_service_factory_->CreateAlsaPlaybackService(
 				canonicalFullPath, 
-				file_id	
+				file_id,
+				new_play_seq_id
 			);
 		}
 		catch(const std::runtime_error &e) {
@@ -109,20 +118,13 @@ namespace wavplayeralsa
 				std::setfill('0') << std::setw(2) << seconds << ")";
 		}
 
-        uint32_t new_play_seq_id = play_seq_id_ + 1;
         try {
-			alsa_service_->Play(start_offset_ms, new_play_seq_id);
+			alsa_service_->Play(start_offset_ms);
         }
         catch(const std::runtime_error &e) {
             out_msg << "playing new audio file '" << file_id << "' failed. currently player is not playing. " <<
                 "reason for failure: " << e.what();
             return false;
-        }
-
-        play_seq_id_ = new_play_seq_id;
-        if(play_seq_id != nullptr)
-        {
-            *play_seq_id = play_seq_id_;
         }
 
 		return true;

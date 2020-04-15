@@ -24,13 +24,14 @@ namespace wavplayeralsa
 			PlayerEventsIfc *player_events_callback_,
             const std::string &full_file_name, 
             const std::string &file_id,
-			const std::string &audio_device
+			const std::string &audio_device,
+			uint32_t play_seq_id
         );
 
 		~AlsaPlaybackService();
 
 	public:
-		void Play(int32_t offset_in_ms, uint32_t play_seq_id);
+		void Play(int32_t offset_in_ms);
 		bool Stop();
 		const std::string GetFileId() const { return file_id_; }
 
@@ -40,11 +41,11 @@ namespace wavplayeralsa
 		void InitAlsa(const std::string &audio_device);      
 
 	private:
-		void PlayingThreadMain(uint32_t play_seq_id);
-		void FramesToPcmTransferLoop(boost::system::error_code error_code, uint32_t play_seq_id);
-		void PcmDrainLoop(boost::system::error_code error_code, uint32_t play_seq_id);
+		void PlayingThreadMain();
+		void FramesToPcmTransferLoop(boost::system::error_code error_code);
+		void PcmDrainLoop(boost::system::error_code error_code);
 		void PcmDrop();
-		void CheckSongStartTime(uint32_t play_seq_id);
+		void CheckSongStartTime();
 		bool IsAlsaStatePlaying();
 
     private:
@@ -57,6 +58,7 @@ namespace wavplayeralsa
 	// config
 	private:
 		const std::string file_id_;
+		const uint32_t play_seq_id_;
 
     // alsa
     private:
@@ -102,9 +104,11 @@ namespace wavplayeralsa
 			PlayerEventsIfc *player_events_callback,
             const std::string &full_file_name, 
             const std::string &file_id,
-			const std::string &audio_device
+			const std::string &audio_device,
+			uint32_t play_seq_id
         ) :
 			file_id_(file_id),
+			play_seq_id_(play_seq_id),
             logger_(logger),
 			alsa_wait_timer_(ios_),
 			player_events_callback_(player_events_callback)
@@ -391,7 +395,7 @@ namespace wavplayeralsa
 		return false;
 	}
 
-	void AlsaPlaybackService::Play(int32_t offset_in_ms, uint32_t play_seq_id) {
+	void AlsaPlaybackService::Play(int32_t offset_in_ms) {
 		
 		if(!initialized_) {
 			throw std::runtime_error("tried to play wav file on an uninitialzed alsa service");
@@ -409,7 +413,7 @@ namespace wavplayeralsa
 		sf_count_t seek_res = snd_file_.seek(curr_position_frames_, SEEK_SET);
 
 		logger_->info("start playing file {} from position {} mili-seconds ({} seconds)", file_id_, offset_in_ms, position_in_seconds);
-		playing_thread_ = std::thread(&AlsaPlaybackService::PlayingThreadMain, this, play_seq_id);
+		playing_thread_ = std::thread(&AlsaPlaybackService::PlayingThreadMain, this);
 	}
 
 	bool AlsaPlaybackService::Stop() {
@@ -424,22 +428,22 @@ namespace wavplayeralsa
 		return was_playing;
 	}
 
-	void AlsaPlaybackService::PlayingThreadMain(uint32_t play_seq_id) {
+	void AlsaPlaybackService::PlayingThreadMain() {
 
 		try {
-			ios_.post(std::bind(&AlsaPlaybackService::FramesToPcmTransferLoop, this, boost::system::error_code(), play_seq_id));
+			ios_.post(std::bind(&AlsaPlaybackService::FramesToPcmTransferLoop, this, boost::system::error_code()));
 			ios_.run();
 			PcmDrop();
 		}
 		catch(const std::runtime_error &e) {
-			logger_->error("play_seq_id: {}. error while playing current wav file. stopped transfering frames to alsa. exception is: {}", play_seq_id, e.what());
+			logger_->error("play_seq_id: {}. error while playing current wav file. stopped transfering frames to alsa. exception is: {}", play_seq_id_, e.what());
 		}
-		logger_->info("play_seq_id: {}. handling done", play_seq_id);
-		player_events_callback_->NoSongPlayingStatus(file_id_, play_seq_id);
+		logger_->info("play_seq_id: {}. handling done", play_seq_id_);
+		player_events_callback_->NoSongPlayingStatus(file_id_, play_seq_id_);
 		ios_.stop();
 	}
 
-	void AlsaPlaybackService::FramesToPcmTransferLoop(boost::system::error_code error_code, uint32_t play_seq_id) {
+	void AlsaPlaybackService::FramesToPcmTransferLoop(boost::system::error_code error_code) {
 
 		// the function might be called from timer, in which case error_code might
 		// indicate the timer canceled and we should not invoke the function.
@@ -462,7 +466,7 @@ namespace wavplayeralsa
 		}
 		else if(frames_to_deliver == 0) {
 			alsa_wait_timer_.expires_from_now(boost::posix_time::millisec(5));
-			alsa_wait_timer_.async_wait(std::bind(&AlsaPlaybackService::FramesToPcmTransferLoop, this, std::placeholders::_1, play_seq_id));
+			alsa_wait_timer_.async_wait(std::bind(&AlsaPlaybackService::FramesToPcmTransferLoop, this, std::placeholders::_1));
 			return;
 		}
 
@@ -479,8 +483,8 @@ namespace wavplayeralsa
 			throw std::runtime_error(err_desc.str());				
 		}
 		if(bytes_to_deliver == 0) {
-			logger_->info("play_seq_id: {}. done writing all frames to pcm. waiting for audio device to play remaining frames in the buffer", play_seq_id);
-			ios_.post(std::bind(&AlsaPlaybackService::PcmDrainLoop, this, boost::system::error_code(), play_seq_id));
+			logger_->info("play_seq_id: {}. done writing all frames to pcm. waiting for audio device to play remaining frames in the buffer", play_seq_id_);
+			ios_.post(std::bind(&AlsaPlaybackService::PcmDrainLoop, this, boost::system::error_code()));
 			return;
 		}
 
@@ -492,16 +496,16 @@ namespace wavplayeralsa
 
 		curr_position_frames_ += frames_written;
 		if(frames_written != frames_to_deliver) {
-			logger_->warn("play_seq_id: {}. transfered to alsa less frame then requested. frames_to_deliver: {}, frames_written: {}", play_seq_id, frames_to_deliver, frames_written);
+			logger_->warn("play_seq_id: {}. transfered to alsa less frame then requested. frames_to_deliver: {}, frames_written: {}", play_seq_id_, frames_to_deliver, frames_written);
 			snd_file_.seek(curr_position_frames_, SEEK_SET);
 		}
 
-		CheckSongStartTime(play_seq_id);
+		CheckSongStartTime();
 
-		ios_.post(std::bind(&AlsaPlaybackService::FramesToPcmTransferLoop, this, boost::system::error_code(), play_seq_id));
+		ios_.post(std::bind(&AlsaPlaybackService::FramesToPcmTransferLoop, this, boost::system::error_code()));
 	}
 
-	void AlsaPlaybackService::PcmDrainLoop(boost::system::error_code error_code, uint32_t play_seq_id) {
+	void AlsaPlaybackService::PcmDrainLoop(boost::system::error_code error_code) {
 
 		if(error_code)
 			return;
@@ -509,14 +513,14 @@ namespace wavplayeralsa
 		bool is_currently_playing = IsAlsaStatePlaying();
 
 		if(!is_currently_playing) {
-			logger_->info("play_seq_id: {}. playing audio file ended successfully (transfered all frames to pcm and it is empty).", play_seq_id);
+			logger_->info("play_seq_id: {}. playing audio file ended successfully (transfered all frames to pcm and it is empty).", play_seq_id_);
 			return;
 		}
 
-		CheckSongStartTime(play_seq_id);
+		CheckSongStartTime();
 
 		alsa_wait_timer_.expires_from_now(boost::posix_time::millisec(5));
-		alsa_wait_timer_.async_wait(std::bind(&AlsaPlaybackService::PcmDrainLoop, this, std::placeholders::_1, play_seq_id));
+		alsa_wait_timer_.async_wait(std::bind(&AlsaPlaybackService::PcmDrainLoop, this, std::placeholders::_1));
 	}
 
 	void AlsaPlaybackService::PcmDrop() 
@@ -529,7 +533,7 @@ namespace wavplayeralsa
 		}
 	}
 
-	void AlsaPlaybackService::CheckSongStartTime(uint32_t play_seq_id) {
+	void AlsaPlaybackService::CheckSongStartTime() {
 		int err;
 		snd_pcm_sframes_t delay = 0;
 		int64_t pos_in_frames = 0;
@@ -558,10 +562,10 @@ namespace wavplayeralsa
 		if(diff_from_prev <= 1 && diff_from_prev >= -1)
 			return;
 
-		player_events_callback_->NewSongStatus(file_id_, play_seq_id, audio_file_start_time_ms_since_epoch, 1.0);
+		player_events_callback_->NewSongStatus(file_id_, play_seq_id_, audio_file_start_time_ms_since_epoch, 1.0);
 
 		std::stringstream msg_stream;
-		msg_stream << "play_seq_id: " << play_seq_id << ". ";
+		msg_stream << "play_seq_id: " << play_seq_id_ << ". ";
 		msg_stream << "calculated a new audio file start time: " << audio_file_start_time_ms_since_epoch << " (ms since epoch). ";
 		if(audio_start_time_ms_since_epoch_ > 0) {
 			msg_stream << "this is a change since last calculation of " << diff_from_prev << " ms. ";
@@ -596,7 +600,8 @@ namespace wavplayeralsa
 
     IAlsaPlaybackService* AlsaPlaybackServiceFactory::CreateAlsaPlaybackService(
             const std::string &full_file_name, 
-            const std::string &file_id
+            const std::string &file_id,
+			uint32_t play_seq_id
         )
     {
         return new AlsaPlaybackService(
@@ -604,7 +609,8 @@ namespace wavplayeralsa
 			player_events_callback_,
             full_file_name,
             file_id,
-			audio_device_
+			audio_device_,
+			play_seq_id
         );
     }
 
