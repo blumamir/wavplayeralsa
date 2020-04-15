@@ -18,7 +18,6 @@
 #include "web_sockets_api.h"
 #include "http_api.h"
 #include "mqtt_api.h"
-#include "alsa_frames_transfer.h"
 #include "audio_files_manager.h"
 #include "current_song_controller.h"
 #include "services/alsa_service.h"
@@ -39,7 +38,6 @@ public:
 			io_service_, 
 			&mqtt_api_, 
 			&web_sockets_api_, 
-			&alsa_frames_transfer_,
 			&alsa_playback_service_factory_)
 	{
 
@@ -133,7 +131,6 @@ public:
 			http_api_logger_ = root_logger_->clone("http_api");
 			ws_api_logger_ = root_logger_->clone("ws_api");
 			mqtt_api_logger_ = root_logger_->clone("mqtt_api");
-			alsa_frames_transfer_logger_ = root_logger_->clone("alsa_frames_transfer");
 			alsa_playback_service_factory_logger = root_logger_->clone("alsa_playback_service_factory");
 		}
 		catch(const std::exception &e) {
@@ -154,7 +151,6 @@ public:
 	// can throw exception
 	void InitializeComponents() {
 		try {
-			alsa_frames_transfer_.Initialize(alsa_frames_transfer_logger_, &current_song_controller_, audio_device_);
 			audio_files_manager.Initialize(wav_dir_);
 			web_sockets_api_.Initialize(ws_api_logger_, &io_service_, ws_listen_port_);
 			http_api_.Initialize(http_api_logger_, uuid_, &io_service_, &current_song_controller_, &audio_files_manager, http_listen_port_);
@@ -267,7 +263,6 @@ private:
 	std::shared_ptr<spdlog::logger> http_api_logger_;
 	std::shared_ptr<spdlog::logger> mqtt_api_logger_;
 	std::shared_ptr<spdlog::logger> ws_api_logger_;
-	std::shared_ptr<spdlog::logger> alsa_frames_transfer_logger_;
 	std::shared_ptr<spdlog::logger> alsa_playback_service_factory_logger;
 
 private:
@@ -279,7 +274,6 @@ private:
 	wavplayeralsa::HttpApi http_api_;
 	wavplayeralsa::MqttApi mqtt_api_;
 	wavplayeralsa::AudioFilesManager audio_files_manager;
-	wavplayeralsa::AlsaFramesTransfer alsa_frames_transfer_;
 	wavplayeralsa::AlsaPlaybackServiceFactory alsa_playback_service_factory_;
 
 	wavplayeralsa::CurrentSongController current_song_controller_;

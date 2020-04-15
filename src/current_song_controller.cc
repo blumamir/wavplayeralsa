@@ -13,7 +13,6 @@ namespace wavplayeralsa
 			boost::asio::io_service &io_service, 
 			MqttApi *mqtt_service,  
 			WebSocketsApi *ws_service,
-			AlsaFramesTransfer *alsa_service,
 			AlsaPlaybackServiceFactory *alsa_playback_service_factory
 		) : 
 			ios_(io_service), 

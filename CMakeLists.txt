@@ -10,7 +10,6 @@ include_directories(thirdparty/mqtt_cpp)
 
 set (SOURCES 
 	src/wavplayeralsa.cpp 
-	src/alsa_frames_transfer.cc 
 	src/web_sockets_api.cc
 	src/http_api.cc
 	src/mqtt_api.cc
