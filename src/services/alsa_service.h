@@ -16,7 +16,7 @@ namespace wavplayeralsa
 
     public:
         virtual const std::string GetFileId() const = 0;
-        virtual void Play(int32_t offset_in_ms) = 0;
+        virtual void Play(int64_t offset_in_ms) = 0;
         virtual bool Stop() = 0;
 
     };

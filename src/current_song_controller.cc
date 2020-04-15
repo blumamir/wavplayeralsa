@@ -57,7 +57,7 @@ namespace wavplayeralsa
 
 	bool CurrentSongController::NewSongRequest(
         const std::string &file_id, 
-        uint64_t start_offset_ms, 
+        int64_t start_offset_ms, 
         std::stringstream &out_msg,
         uint32_t *play_seq_id) 
     {
@@ -101,7 +101,7 @@ namespace wavplayeralsa
 		}
 		else {
 			static const int SECONDS_PER_HOUR = (60 * 60);
-			uint64_t start_offset_sec = start_offset_ms / 1000;
+			uint64_t start_offset_sec = std::abs(start_offset_ms) / 1000;
 			uint64_t hours = start_offset_sec / SECONDS_PER_HOUR;
 			start_offset_sec = start_offset_sec - hours * SECONDS_PER_HOUR;
 			uint64_t minutes = start_offset_sec / 60;
