@@ -10,12 +10,12 @@ include_directories(thirdparty/mqtt_cpp)
 
 set (SOURCES 
 	src/wavplayeralsa.cpp 
-	src/alsa_frames_transfer.cc 
 	src/web_sockets_api.cc
 	src/http_api.cc
 	src/mqtt_api.cc
 	src/audio_files_manager.cc
 	src/current_song_controller.cc
+	src/services/alsa_service.cc
 )
 
 set(CMAKE_BUILD_TYPE Debug)
