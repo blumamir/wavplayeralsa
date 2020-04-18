@@ -22,7 +22,11 @@ namespace wavplayeralsa
         void SetParamFromFile(const std::string &param_name, const std::string &param_value);
 
     public:
-        bool GetSaveLogsToFile() const { return !log_dir_.empty(); }
+        bool SaveLogsToFile() const { return !log_dir_.empty(); }
+        bool UseMqtt() const { return !mqtt_host_.empty(); }
+        bool HasConfigFile() const { return !config_file_.empty(); }
+
+    public:
         std::string GetLogDir() const { return log_dir_; }
         std::string GetInitialFile() const { return initial_file_; }
         uint16_t GetWsListenPort() const { return ws_listen_port_; }

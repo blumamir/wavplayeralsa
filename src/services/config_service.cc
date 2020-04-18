@@ -98,7 +98,9 @@ void ConfigService::LogConfig(std::shared_ptr<spdlog::logger> logger) const
 {
 	std::stringstream config_stream;
 	config_stream << "Configuration:" << std::endl;
-	config_stream << "config file='" << config_file_ << "'" << std::endl;
+	if(HasConfigFile()) {
+		config_stream << "config file: '" << config_file_ << "'" << std::endl;
+	}
 
 	config_stream << "player: wav_dir='" << wav_dir_ << "'";
 	if(!initial_file_.empty()) {
@@ -110,15 +112,21 @@ void ConfigService::LogConfig(std::shared_ptr<spdlog::logger> logger) const
 
 	config_stream << "http: listen_port='" << http_listen_port_ << "'" << std::endl;
 
-	if(mqtt_host_.empty()) {
-		config_stream << "mqtt: disabled" << std::endl;
-	}
-	else {
+	if(UseMqtt()) {
 		config_stream << "mqtt: host='" << mqtt_host_ << "', port='" << mqtt_port_ << "'" << std::endl;
 	}
+	else {
+		config_stream << "mqtt: disabled" << std::endl;
+	}
 
-	config_stream << "logs: directory='" << log_dir_ << "'" << std::endl;
-	config_stream << "audio_device='" << audio_device_ << "'";
+	if(SaveLogsToFile()) {
+		config_stream << "log file: directory='" << log_dir_ << "'" << std::endl;
+	}
+	else {
+		config_stream << "log file: not saving log to file, as none is configured" << std::endl;
+	}
+
+	config_stream << "audio device: '" << audio_device_ << "'";
 	logger->info(config_stream.str());
 }
 

@@ -67,7 +67,7 @@ public:
 			// create two logger sinks
 			std::vector<spdlog::sink_ptr> sinks;
 			sinks.push_back(createLoggerConsole());
-			if(config_service_.GetSaveLogsToFile()) {
+			if(config_service_.SaveLogsToFile()) {
 				sinks.push_back(createLoggerFileSink(command_name, config_service_.GetLogDir()));
 			}
 
@@ -75,7 +75,7 @@ public:
 			root_logger_->flush_on(spdlog::level::info); 
 
 			root_logger_->info("hello wavplayeralsa. logger initialized");
-			if(config_service_.GetSaveLogsToFile()) {
+			if(config_service_.SaveLogsToFile()) {
 				root_logger_->info("log file for this run is: '{}'", m_logFilePath);
 				root_logger_->info("canonical location of log file: '{}'", m_logFileCanonicalPath);
 			}
@@ -123,7 +123,7 @@ public:
 				config_service_.GetAudioDevice()
 			);
 
-			if(UseMqtt()) {
+			if(config_service_.UseMqtt()) {
 				mqtt_api_.Initialize(mqtt_api_logger_, config_service_.GetMqttHost(), config_service_.GetMqttPort());
 			}
 		}
@@ -145,12 +145,6 @@ public:
 		}	
 
 		io_service_.run();
-	}
-
-private:
-
-	bool UseMqtt() {
-		return !config_service_.GetMqttHost().empty();
 	}
 
 private:
