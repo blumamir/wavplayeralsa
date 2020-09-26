@@ -5,7 +5,7 @@ on:
     branches: master
 
 jobs:
-  path-context:
+  publish-to-dockerhub:
     runs-on: ubuntu-latest
     steps:
       -
@@ -29,6 +29,6 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
-          platforms: linux/amd64,linux/arm64,linux/386
+          platforms: linux/amd64,linux/arm64,linux/386, linux/arm
           push: true
           tags: blumamir/wavplayeralsa:latest
