@@ -69,6 +69,6 @@ Any offset in clock synchronization (between client's and player's os) will be c
 ## Docker
 You can run the player as a docker.
 
-Build: `docker build .`
+Build: `docker build -t wavplayeralsa .`
 
-Run: `docker run -p 8080:80 -v ${MusicDirectory}:/wav_files --device /dev/snd ${DockerId}`
+Run: `docker run -p 8080:80 -v ${MusicDirectory}:/wav_files --device /dev/snd --name wavplayeralsa wavplayeralsa`
