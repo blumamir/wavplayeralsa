@@ -4,6 +4,11 @@ project (wavplayeralsa)
 set (CMAKE_CXX_STANDARD 14)
 include_directories(src)
 
+find_package(Boost 1.65.1 REQUIRED COMPONENTS system filesystem)
+if(Boost_FOUND)
+	include_directories(${Boost_INCLUDE_DIRS})
+endif()
+
 # include third party header only libraries
 include_directories(thirdparty)
 include_directories(thirdparty/mqtt_cpp)
@@ -22,4 +27,4 @@ set (SOURCES
 set(CMAKE_BUILD_TYPE Debug)
 
 add_executable (wavplayeralsa ${SOURCES})
-target_link_libraries(wavplayeralsa -lasound -lsndfile -lboost_system -lboost_filesystem -pthread -luuid)
+target_link_libraries(wavplayeralsa -lasound -lsndfile ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} -pthread -luuid)

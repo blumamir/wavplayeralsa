@@ -65,3 +65,10 @@ When a stop is performed via control interface, or when audio reach end of file:
 Client can calculate the file's audio position at any givin time, using it's local clock, which should be synchronized to the player's clock.
 This enable clients to act upon precise and continuous audio position, which does not dependent on network latency and update rate.
 Any offset in clock synchronization (between client's and player's os) will be carried to audio position calculation, thus user should assure such offset is minimal (using NTP for example, or running client on same machine as player).
+
+## Docker
+You can run the player as a docker.
+
+Build: `docker build .`
+
+Run: `docker run -p 8080:80 -v ${MusicDirectory}:/wav_files --device /dev/snd ${DockerId}`
