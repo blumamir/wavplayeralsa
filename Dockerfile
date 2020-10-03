@@ -35,4 +35,7 @@ RUN apt-get update && \
         libboost-system-dev \ 
         libboost-filesystem-dev
 
-CMD ["./wavplayeralsa", "-d", "/wav_files", "--http_listen_port", "80"]
+EXPOSE 80
+EXPOSE 9002
+
+ENTRYPOINT ["./wavplayeralsa", "-d", "/wav_files", "--http_listen_port", "80", "--ws_listen_port", "9002"]
