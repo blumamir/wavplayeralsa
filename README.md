@@ -3,7 +3,7 @@
 0. Install Raspbian https://www.raspberrypi.org/documentation/installation/installing-images/
 1. Install boost, sndfile and libsound libs
 ```
-  sudo apt-get install libsndfile1-dev libasound2-dev libboost-all-dev uuid-dev
+  sudo apt-get install libsndfile1-dev libasound2-dev libboost-all-dev
 ```  
 2. Clone the wavplayeralsa project and compile it
 ```

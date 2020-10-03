@@ -10,7 +10,6 @@ RUN apt-get update && \
         tzdata \
         build-essential \
         cmake \
-        uuid-dev \
         libsndfile1-dev \
         libasound2-dev \
         libboost-all-dev
