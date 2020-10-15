@@ -32,8 +32,8 @@ RUN apt-get update && \
     apt-get install -y \
         libsndfile1 \
         libasound2 \ 
-        libboost-system-1.65.1 \ 
-        libboost-filesystem-1.65.1
+        libboost-system1.65.1 \ 
+        libboost-filesystem1.65.1
 
 EXPOSE 80
 EXPOSE 9002
